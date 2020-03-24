@@ -1,3 +1,10 @@
+/*
+ * Name: David Richards
+ * Assignment: CS4760 Project 4
+ * Date: tue March 24th
+ * File: "user.c"
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -41,16 +48,12 @@ int main(int argc, char** argv)
     shmid_pct = atoi(argv[1]);
     my_sim_pid = atoi(argv[2]);
     int roll;
-
-	printf("User %d launched.\n", my_sim_pid);
 	getSM();
 	pct[my_sim_pid].startTime_secs = *simClock_secs; 
     pct[my_sim_pid].startTime_ns = *simClock_ns;
 
 	while(1) {
         if ( msgrcv(oss_qid, &myinfo, sizeof(myinfo), my_sim_pid, 0) == -1 ) {
-            
-            printf("User %02d Terminated: OSS removed message queue.\n", my_sim_pid);
             exit(0);
         }
         myinfo.user_sys_pid = getpid(); 

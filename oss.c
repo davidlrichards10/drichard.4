@@ -1,3 +1,10 @@
+/*
+ * Name: David Richards
+ * Assignment: CS4760 Project 4
+ * Date: Tue March 24th
+ * File: oss.c (main file)
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -135,25 +142,17 @@ int main(int argc, char** argv)
     	initQueue(blocked, arraysize);
     
    	setTimeToNextProc();
-    	printf("First user will spawn at %u:%u\n", 
-	spawnNextProcSecs, spawnNextProcNS);
 	
 	while (1) 
 	{
 		    if (realTimeElapsed < runtimeAllowed) {
             realTimeElapsed = (double)(time(NULL) - start);
             if (realTimeElapsed >= runtimeAllowed) {
-                printf("OSS: Real-time limit of %f has elapsed. No new users"
-                        "will be generated\n", runtimeAllowed);
                 allowNewUsers = 0;
             }
         }
        
         if (allowNewUsers == 0 && numCurrentUsers == 0) {
-            printf("OSS: User generation is disallowed and "
-                    "all users have terminated.\n");
-            fprintf(fp, "OSS: User generation is disallowed and "
-                    "all users have terminated.\n");
             break;
         }
 
@@ -167,13 +166,9 @@ int main(int argc, char** argv)
     
         if ( (nextOccupiedQueue == -1) && (allowNewUsers == 0) ) {
             setTimeToNextProc();
-            fprintf(fp, "OSS: No processes ready to run, incrementing sim "
-                    "clock from %u:%09u to ", *simClock_secs, *simClock_ns);
             incrementIdleTime();
             *simClock_secs = spawnNextProcSecs;
             *simClock_ns = spawnNextProcNS;
-            fprintf(fp, "%u:%09u\n", *simClock_secs, *simClock_ns);
-            fflush(fp);
          
             if (numProcsUnblocked == 0) {
                 finishThem = 1;
@@ -181,9 +176,6 @@ int main(int argc, char** argv)
             		}
         }	
 	else if ( nextOccupiedQueue == -1 && allowNewUsers == 1 ) {
-            fprintf(fp, "OSS: Current live users = %d\n", numCurrentUsers);
-            fprintf(fp, "OSS: No processes ready to run, incrementing sim "
-                    "clock from %u:%09u to ", *simClock_secs, *simClock_ns);
             incrementIdleTime();
             *simClock_secs = spawnNextProcSecs;
             *simClock_ns = spawnNextProcNS;
@@ -322,8 +314,6 @@ int main(int argc, char** argv)
                     numCurrentUsers++;
                 }
                 else {
-                    fprintf(fp, "OSS: New process spawn denied: "
-                            "process control table is full.\n");
                     setTimeToNextProc();
                 }
             }
@@ -377,8 +367,6 @@ int main(int argc, char** argv)
         }
     
     }
-
-	//}
 
 	detach();
 
@@ -489,8 +477,8 @@ void terminateUser(int termpid) {
     pct[termpid].totalCPUtime_ns = 0;
     pct[termpid].totalLIFEtime_secs = 0;
     pct[termpid].totalLIFEtime_ns = 0;
-    printf("OSS: User %d has terminated. Users alive: %d\n",
-        infostruct.user_sim_pid, numCurrentUsers);
+    fprintf(fp,"OSS: User %d has terminated\n",
+        infostruct.user_sim_pid);
 }
 
 void incrementSimClockAfterMessageReceipt(int userpid) {
@@ -532,7 +520,6 @@ int removeProcFromQueue(int q[], int arrsize, int proc_num) {
 
 void awakenUser(int wakepid) {
     unsigned int localsec, localns, temp;
-    fprintf(fp, "OSS: Waking up user %d ", wakepid);
 
     removeProcFromQueue(blocked, arraysize, wakepid);
 
@@ -543,13 +530,11 @@ void awakenUser(int wakepid) {
     if (pct[wakepid].isRealTimeClass == 1) {
         addProcToQueue(queue0, arraysize, wakepid);
         pct[wakepid].currentQueue = 0;
-        fprintf(fp, "and putting into queue 0\n");
     }
     
     else {
         addProcToQueue(queue1, arraysize, wakepid);
         pct[wakepid].currentQueue = 1;
-        fprintf(fp, "and putting into queue 1\n");
     }
 
     localsec = *simClock_secs;
@@ -558,8 +543,6 @@ void awakenUser(int wakepid) {
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
     localns = localns + temp; 
-    fprintf(fp, "OSS: Time used to awaken user from blocked state: %u "
-            "nanoseconds\n", temp);
 }
 
 int getNextOccupiedQueue() {
@@ -604,9 +587,6 @@ void setTimeToNextProc()
 		temp = spawnNextProcNS - BILLION;
 		spawnNextProcNS = temp;
 	}
-	
-	fprintf(fp, "OSS: Next user spawn scheduled for %ld:%09ld\n", 
-        spawnNextProcSecs, spawnNextProcNS );
 }
 
 void spawnNewUser() 
@@ -618,17 +598,12 @@ void spawnNewUser()
     setTimeToNextProc(); 
     user_sim_pid = getOpenBitVector();
     if (user_sim_pid == -1) {
-        printf("OSS: Error in spawnNewUser: no open bitvector\n");
         detach();
         exit(0);
     }
     numProcsSpawned++;
 
     if (numProcsSpawned >= 10) {
-        printf("OSS: 100 total users spawned. No new users will be "
-                "generated after this one.\n");
-        fprintf(fp, "OSS: 100 total users spawned. "
-                "No new users will be generated after this one.\n");
         allowNewUsers = 0;
     }
     infostruct.msgtyp = user_sim_pid;
@@ -638,7 +613,6 @@ void spawnNewUser()
 
     roll = roll1000();
     if (roll < 45) {
-        printf("OSS: Rolled a real-time class user process.\n");
         infostruct.ossTimeSliceGivenNS = quantum_0;
         makePCB(user_sim_pid, 1);
         addProcToQueue(queue0, arraysize, user_sim_pid);
@@ -793,9 +767,7 @@ void initBitVector(int n)
 }
 
 void setUp() 
-{
-    printf("OSS: Allocating shared memory\n");
-    
+{   
     shmid_pct = shmget(SHMKEY_pct, 19*sizeof(struct pcb), 0777 | IPC_CREAT);
      if (shmid_pct == -1) { 
             perror("OSS: error in shmget shmid_pct");
@@ -830,8 +802,6 @@ void setUp()
 
 void detach() 
 {
-    printf("OSS: Clearing IPC resources...\n");
-
     if ( shmctl(shmid_sim_secs, IPC_RMID, NULL) == -1) {
         perror("error removing shared memory");
     }

@@ -1,3 +1,10 @@
+/*
+ * Name: David Richards
+ * Assignment: CS4760 Project 4
+ * Date: Tue March 24th
+ * File: "shared.h"
+ */
+
 #ifndef SHARED_H
 #define SHARED_H
 
