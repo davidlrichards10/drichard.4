@@ -15,21 +15,72 @@
 
 void setUp(); //allocate shared memory
 void detach(); //clear shared memory and message queues
+void sigErrors(int signum);
 
 int shmid_sim_secs, shmid_sim_ns;
 int shmid_pct;
 int oss_qid;
+unsigned int maxTimeBetweenProcsNS, maxTimeBetweenProcsSecs;
+unsigned int timeToNextProcNS, timeToNextProcSecs, seed;
+unsigned int spawnNextProcNS, spawnNextProcSecs;
 static unsigned int *simClock_secs; //pointer to shm sim clock (seconds)
 static unsigned int *simClock_ns; //pointer to shm sim clock (nanoseconds)
 
-
+char outputFileName[] = "logs";
+FILE* fp;
 
 struct commsbuf infostruct;
 
 struct pcb * pct;
 
+
 int main(int argc, char** argv) 
 {
+	int c;
+	while((c=getopt(argc, argv, "i:h"))!= EOF)
+        {
+                switch(c)
+                {
+        case 'h':
+                printf("\nInvocation: master [-h] [-i x]\n");
+                printf("------------------------------------------Program Options-----------------------------------\n");
+                printf("       -h             Describe how the project should be run and then, terminate\n");
+		printf("       -i             Type file name to print program information in (Default of message.log)\n");
+		return EXIT_SUCCESS;
+        case 'i':
+                strcpy(outputFileName, optarg);
+                break;
+        default:
+                return -1;
+
+        	}
+	}
+
+	fp = fopen(outputFileName, "w");
+
+	int finishThem = 0;
+    	int i; 
+   	double realTimeElapsed = 0;
+    	double runtimeAllowed = 3; 
+    	maxTimeBetweenProcsNS = 999999998;
+    	maxTimeBetweenProcsSecs = 0;
+    	seed = (unsigned int) getpid(); 
+    	pid_t childpid; 
+    	char str_pct_id[20]; 
+    	char str_user_sim_pid[4]; 
+   	int user_sim_pid;
+    	int firstblocked;	
+
+	if (signal(SIGINT, sigErrors) == SIG_ERR) //sigerror on cntrl-c
+        {
+                exit(0);
+        }
+
+        if (signal(SIGALRM, sigErrors) == SIG_ERR) //sigerror on program exceeding 2 second alarm
+        {
+                exit(0);
+        }
+
 	setUp();
 	detach();
 
@@ -91,4 +142,19 @@ void detach()
         perror("OSS: Error removing ODD message queue");
         exit(0);
     }
+}
+
+void sigErrors(int signum)
+{
+        if (signum == SIGINT)
+        {
+                printf("\nSIGINT\n");
+        }
+        else
+        {
+                printf("\nSIGALRM\n");
+        }
+	
+	detach();
+        exit(0);
 }
