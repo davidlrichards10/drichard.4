@@ -6,6 +6,7 @@
 #define SHMKEY_pct 4020014
 #define MSGQKEY_oss 4020069
 #define BUFF_SZ sizeof (unsigned int)
+#define BILLION 1000000000
 
 struct pcb{
     unsigned int startTime_secs;
