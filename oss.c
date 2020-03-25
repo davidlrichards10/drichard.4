@@ -23,7 +23,7 @@
 void setUp(); //allocate shared memory
 void detach(); //clear shared memory and message queues
 void sigErrors(int signum);
-void bitMap(int n);
+void bitMapF(int n);
 void queue(int[], int);
 void nextPbegin();
 void PCB(int pidnum, int isRealTime);
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
 
 	setUp();
 	
-	initBitVector(array);
+	bitMapF(array);
     	queue(q0, array);
     	queue(q1, array);
     	queue(q2, array);
@@ -684,7 +684,7 @@ int incTime(){
         localns = (createNS - localsim_ns);
     }
     else {
-        localsec = (creaetSec - localsim_s);
+        localsec = (createSec - localsim_s);
         localns = createNS + (BILLION - localsim_ns);
         localsec--;
     }
@@ -758,7 +758,7 @@ void queue(int q[], int size)
     }
 }
 
-void bitMap(int n) 
+void bitMapF(int n) 
 {
     int i;
     for (i=0; i<n; i++) {
