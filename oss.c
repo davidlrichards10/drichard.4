@@ -23,58 +23,58 @@
 void setUp(); //allocate shared memory
 void detach(); //clear shared memory and message queues
 void sigErrors(int signum);
-void initBitVector(int n);
-void initQueue(int[], int);
-void setTimeToNextProc();
-void makePCB(int pidnum, int isRealTime);
-int getOpenBitVector();
+void bitMap(int n);
+void queue(int[], int);
+void nextPbegin();
+void PCB(int pidnum, int isRealTime);
+int getBitSpot();
 int roll1000();
-int getNextOccupiedQueue();
-void spawnNewUser();
-int isBlockedQueueEmpty();
-int checkBlockedQueue();
-int incrementIdleTime();
-void awakenUser(int);
-int removeProcFromQueue(int[], int, int);
-void incrementSimClockAfterMessageReceipt(int);
-void terminateUser(int);
-void blockUser(int);
-int getNextProcFromQueue(int[]);
-int isTimeToSpawnProc();
+int putQueue();
+void createChild();
+int blockedCheck();
+int blockedCheckTwo();
+int incTime();
+void getChild(int);
+int queueDelete(int[], int, int);
+void incClock(int);
+void term(int);
+void block(int);
+int getChildQ(int[]);
+int checkTime();
 
-unsigned int totalUserLifetime_secs, totalUserLifetime_ns;
-unsigned int totalWaitTime_secs, totalWaitTime_ns;
+unsigned int totalSec, totalNS;
+unsigned int totalWaitSec, totalWaitNS;
 unsigned int totalBlockedTime_secs, totalBlockedTime_ns;
-int shmid_sim_secs, shmid_sim_ns;
-unsigned int idleTime_secs = 0;
-unsigned int idleTime_ns = 0;
-int shmid_pct;
-int oss_qid;
-int arraysize = 19;
-unsigned int maxTimeBetweenProcsNS, maxTimeBetweenProcsSecs;
-unsigned int timeToNextProcNS, timeToNextProcSecs, seed;
-unsigned int spawnNextProcNS, spawnNextProcSecs;
-static unsigned int *simClock_secs; //pointer to shm sim clock (seconds)
-static unsigned int *simClock_ns; //pointer to shm sim clock (nanoseconds)
-int bitVector[19];
+int smSec, smNS;
+unsigned int stopSec = 0;
+unsigned int stopNS = 0;
+int shmid;
+int qid;
+int array = 19;
+unsigned int maxTimeNS, maxTimeSec;
+unsigned int nextProcNS, nextProcSec, begin;
+unsigned int createNS, createSec;
+static unsigned int *clockSec; //pointer to shm sim clock (seconds)
+static unsigned int *clockNS; //pointer to shm sim clock (nanoseconds)
+int bitMap[19];
 int blocked[19];
-int numProcsSpawned = 0;
-int allowNewUsers = 1;
-int numCurrentUsers = 0;
-int numProcsUnblocked;
-pid_t childpids[20];
-int loglines = 0;
-int nextProcToRun, nextOccupiedQueue;
+int numProc = 0;
+int newChild = 1;
+int numChild = 0;
+int numUnblocked;
+pid_t pids[20];
+int lines = 0;
+int nextP, nextQ;
 
-int queue0[19]; 
-int queue1[19]; 
-int queue2[19]; 
-int queue3[19]; 
+int q0[19]; 
+int q1[19]; 
+int q2[19]; 
+int q3[19]; 
 
-unsigned int quantum_0 = 2000000;
-unsigned int quantum_1 = 4000000; 
-unsigned int quantum_2 = 8000000;
-unsigned int quantum_3 = 16000000;
+unsigned int cost0 = 2000000;
+unsigned int cost1 = 4000000; 
+unsigned int cost2 = 8000000;
+unsigned int cost3 = 16000000;
 
 char outputFileName[] = "log";
 FILE* fp;
@@ -113,9 +113,9 @@ int main(int argc, char** argv)
     	int i; 
    	double realTimeElapsed = 0;
     	double runtimeAllowed = 10; 
-    	maxTimeBetweenProcsNS = 999999998;
-    	maxTimeBetweenProcsSecs = 0;
-    	seed = (unsigned int) getpid(); 
+    	maxTimeNS = 999999998;
+    	maxTimeSec = 0;
+    	begin = (unsigned int) getpid(); 
     	pid_t childpid; 
     	char str_pct_id[20]; 
     	char str_user_sim_pid[4]; 
@@ -134,94 +134,94 @@ int main(int argc, char** argv)
 
 	setUp();
 	
-	initBitVector(arraysize);
-    	initQueue(queue0, arraysize);
-    	initQueue(queue1, arraysize);
-    	initQueue(queue2, arraysize);
-    	initQueue(queue3, arraysize);
-    	initQueue(blocked, arraysize);
+	initBitVector(array);
+    	queue(q0, array);
+    	queue(q1, array);
+    	queue(q2, array);
+    	queue(q3, array);
+    	queue(blocked, array);
     
-   	setTimeToNextProc();
+   	nextPbegin();
 	
 	while (1) 
 	{
 		    if (realTimeElapsed < runtimeAllowed) {
             realTimeElapsed = (double)(time(NULL) - start);
             if (realTimeElapsed >= runtimeAllowed) {
-                allowNewUsers = 0;
+                newChild = 0;
             }
         }
        
-        if (allowNewUsers == 0 && numCurrentUsers == 0) {
+        if (newChild == 0 && numChild == 0) {
             break;
         }
 
-        numProcsUnblocked = 0;
-        if (isBlockedQueueEmpty() == 0) { 
-            numProcsUnblocked = checkBlockedQueue();
+        numUnblocked = 0;
+        if (blockedCheck() == 0) { 
+            numUnblocked = blockedCheckTwo();
         }
 
 
-        nextOccupiedQueue = getNextOccupiedQueue();
+        nextQ = putQueue();
     
-        if ( (nextOccupiedQueue == -1) && (allowNewUsers == 0) ) {
-            setTimeToNextProc();
-            incrementIdleTime();
-            *simClock_secs = spawnNextProcSecs;
-            *simClock_ns = spawnNextProcNS;
+        if ( (nextQ == -1) && (newChild == 0) ) {
+            nextPbegin();
+            incTime();
+            *clockSec = createSec;
+            *clockNS = createNS;
          
-            if (numProcsUnblocked == 0) {
+            if (numUnblocked == 0) {
                 finishThem = 1;
                 continue;
             		}
         }	
-	else if ( nextOccupiedQueue == -1 && allowNewUsers == 1 ) {
-            incrementIdleTime();
-            *simClock_secs = spawnNextProcSecs;
-            *simClock_ns = spawnNextProcNS;
-            fprintf(fp, "%u:%09u\n", *simClock_secs, *simClock_ns);
+	else if ( nextQ == -1 && newChild == 1 ) {
+            incTime();
+            *clockSec = createSec;
+            *clockNS = createNS;
+            fprintf(fp, "%u:%09u\n", *clockSec, *clockNS);
             fflush(fp);
-            if ( (allowNewUsers == 1) && (getOpenBitVector() != -1) ) {
-                spawnNewUser(); 
+            if ( (newChild == 1) && (getBitSpot() != -1) ) {
+                createChild(); 
                                 
-                numCurrentUsers++;
+                numChild++;
                 fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", infostruct.user_sim_pid ,
                         pct[infostruct.user_sim_pid].currentQueue,
-                        *simClock_secs, *simClock_ns);
-                if ( msgsnd(oss_qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+                        *clockSec, *clockNS);
+                if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
                     perror("OSS: error sending init msg");
                     detach();
                     exit(0);
                 }
             }
         }
-	else if ( finishThem == 1 && nextOccupiedQueue != -1) {
+	else if ( finishThem == 1 && nextQ != -1) {
             finishThem = 0;
-                if (nextOccupiedQueue == 0) {
-                    nextProcToRun = getNextProcFromQueue(queue0);
-                    infostruct.ossTimeSliceGivenNS = quantum_0;
-                    removeProcFromQueue(queue0, arraysize, nextProcToRun);
-                    addProcToQueue(queue0, arraysize, nextProcToRun);
+                if (nextQ == 0) {
+                    nextP = getChildQ(q0);
+                    infostruct.ossTimeSliceGivenNS = cost0;
+                    queueDelete(q0, array, nextP);
+                    addProcToQueue(q0, array, nextP);
                 }
-                else if (nextOccupiedQueue == 1) {
-                    nextProcToRun = getNextProcFromQueue(queue1);
-                    infostruct.ossTimeSliceGivenNS = quantum_1;
-                    removeProcFromQueue(queue1, arraysize, nextProcToRun);
-                    addProcToQueue(queue1, arraysize, nextProcToRun);
+                else if (nextQ == 1) {
+                    nextP = getChildQ(q1);
+                    infostruct.ossTimeSliceGivenNS = cost1;
+                    queueDelete(q1, array, nextP);
+                    addProcToQueue(q1, array, nextP);
                 }
                 
-                if (nextProcToRun != -1) {
-                    infostruct.msgtyp = (long) nextProcToRun;
+                if (nextP != -1) {
+                    infostruct.msgtyp = (long) nextP;
                     infostruct.userTerminatingFlag = 0;
                     infostruct.userUsedFullTimeSliceFlag = 0;
                     infostruct.userBlockedFlag = 0;
-                    infostruct.user_sim_pid = nextProcToRun;
+                    infostruct.user_sim_pid = nextP;
                     fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
-                    "time %u:%09u\n", nextProcToRun, 
-                    pct[nextProcToRun].currentQueue, 
-                    *simClock_secs, *simClock_ns);
-                    if ( msgsnd(oss_qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+                    "time %u:%09u\n", nextP, 
+                    pct[nextP].currentQueue, 
+                    *clockSec, *clockNS);
+                    if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
                         perror("OSS: error sending user msg");
                         detach();
                         exit(0);
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 
 	 firstblocked = blocked[1]; 
  
-        if ( msgrcv(oss_qid, &infostruct, sizeof(infostruct), 99, 0) == -1 ) {
+        if ( msgrcv(qid, &infostruct, sizeof(infostruct), 99, 0) == -1 ) {
             perror("User: error in msgrcv");
             detach();
             exit(0);
@@ -242,14 +242,14 @@ int main(int argc, char** argv)
         pct[infostruct.user_sim_pid].timeUsedLastBurst_ns = 
                 infostruct.userTimeUsedLastBurst;
         
-        incrementSimClockAfterMessageReceipt(infostruct.user_sim_pid);
+        incClock(infostruct.user_sim_pid);
 
 	 if (infostruct.userTerminatingFlag == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u"
                     " nanoseconds and "
                     "then terminated\n", infostruct.user_sim_pid,
                     infostruct.userTimeUsedLastBurst);
-            terminateUser(infostruct.user_sim_pid);
+            term(infostruct.user_sim_pid);
         }
        
         else if (infostruct.userBlockedFlag == 1) {
@@ -257,7 +257,7 @@ int main(int argc, char** argv)
                     "nanoseconds and "
                     "then was blocked by an event. Moving to blocked queue\n", 
                     infostruct.user_sim_pid, infostruct.userTimeUsedLastBurst);
-            blockUser(infostruct.user_sim_pid);
+            block(infostruct.user_sim_pid);
         }
         
         else if (infostruct.userUsedFullTimeSliceFlag == 0) {
@@ -268,14 +268,14 @@ int main(int argc, char** argv)
          
             if (pct[infostruct.user_sim_pid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 1\n");
-                removeProcFromQueue(queue2, arraysize, infostruct.user_sim_pid);
-                addProcToQueue(queue1, arraysize, infostruct.user_sim_pid);
+                queueDelete(q2, array, infostruct.user_sim_pid);
+                addProcToQueue(q1, array, infostruct.user_sim_pid);
                 pct[infostruct.user_sim_pid].currentQueue = 1;
             }
             else if (pct[infostruct.user_sim_pid].currentQueue == 3) {
                 fprintf(fp, ", moving to queue 1\n");
-                removeProcFromQueue(queue3, arraysize, infostruct.user_sim_pid);
-                addProcToQueue(queue1, arraysize, infostruct.user_sim_pid);
+                queueDelete(q3, array, infostruct.user_sim_pid);
+                addProcToQueue(q1, array, infostruct.user_sim_pid);
                 pct[infostruct.user_sim_pid].currentQueue = 1;
             }
             else {
@@ -290,15 +290,15 @@ int main(int argc, char** argv)
             
             if (pct[infostruct.user_sim_pid].currentQueue == 1) {
                 fprintf(fp, ", moving to queue 2\n");
-                removeProcFromQueue(queue1, arraysize, infostruct.user_sim_pid);
-                addProcToQueue(queue2, arraysize, infostruct.user_sim_pid);
+                queueDelete(q1, array, infostruct.user_sim_pid);
+                addProcToQueue(q2, array, infostruct.user_sim_pid);
                 pct[infostruct.user_sim_pid].currentQueue = 2;
             }
          
             else if (pct[infostruct.user_sim_pid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 3\n");
-                removeProcFromQueue(queue2, arraysize, infostruct.user_sim_pid);
-                addProcToQueue(queue3, arraysize, infostruct.user_sim_pid);
+                queueDelete(q2, array, infostruct.user_sim_pid);
+                addProcToQueue(q3, array, infostruct.user_sim_pid);
                 pct[infostruct.user_sim_pid].currentQueue = 3;
             }
             else {
@@ -307,59 +307,59 @@ int main(int argc, char** argv)
         }
         
 
-        if (allowNewUsers == 1) {
-            if (isTimeToSpawnProc()) {
-                if (getOpenBitVector() != -1) {
-                    spawnNewUser();
-                    numCurrentUsers++;
+        if (newChild == 1) {
+            if (checkTime()) {
+                if (getBitSpot() != -1) {
+                    createChild();
+                    numChild++;
                 }
                 else {
-                    setTimeToNextProc();
+                    nextPbegin();
                 }
             }
         }
 	
-	      nextOccupiedQueue = getNextOccupiedQueue();
-        if (nextOccupiedQueue == 0) {
-            nextProcToRun = getNextProcFromQueue(queue0);
-            infostruct.ossTimeSliceGivenNS = quantum_0;
-            removeProcFromQueue(queue0, arraysize, nextProcToRun);
-            addProcToQueue(queue0, arraysize, nextProcToRun);
+	      nextQ = putQueue();
+        if (nextQ == 0) {
+            nextP = getChildQ(q0);
+            infostruct.ossTimeSliceGivenNS = cost0;
+            queueDelete(q0, array, nextP);
+            addProcToQueue(q0, array, nextP);
         }
-        else if (nextOccupiedQueue == 1) {
-            nextProcToRun = getNextProcFromQueue(queue1);
-            infostruct.ossTimeSliceGivenNS = quantum_1;
-            removeProcFromQueue(queue1, arraysize, nextProcToRun);
-            addProcToQueue(queue1, arraysize, nextProcToRun);
+        else if (nextQ == 1) {
+            nextP = getChildQ(q1);
+            infostruct.ossTimeSliceGivenNS = cost1;
+            queueDelete(q1, array, nextP);
+            addProcToQueue(q1, array, nextP);
         }
-        else if (nextOccupiedQueue == 2) {
-            nextProcToRun = getNextProcFromQueue(queue2);
-            infostruct.ossTimeSliceGivenNS = quantum_2;
-            removeProcFromQueue(queue2, arraysize, nextProcToRun);
-            addProcToQueue(queue2, arraysize, nextProcToRun);
+        else if (nextQ == 2) {
+            nextP = getChildQ(q2);
+            infostruct.ossTimeSliceGivenNS = cost2;
+            queueDelete(q2, array, nextP);
+            addProcToQueue(q2, array, nextP);
         }
-        else if (nextOccupiedQueue == 3) {
-            nextProcToRun = getNextProcFromQueue(queue3);
-            infostruct.ossTimeSliceGivenNS = quantum_3;
-            removeProcFromQueue(queue3, arraysize, nextProcToRun);
-            addProcToQueue(queue3, arraysize, nextProcToRun);
+        else if (nextQ == 3) {
+            nextP = getChildQ(q3);
+            infostruct.ossTimeSliceGivenNS = cost3;
+            queueDelete(q3, array, nextP);
+            addProcToQueue(q3, array, nextP);
         }
    
         else {
             continue;
         }
 
-	if (nextProcToRun != -1) {
-            infostruct.msgtyp = (long) nextProcToRun;
+	if (nextP != -1) {
+            infostruct.msgtyp = (long) nextP;
             infostruct.userTerminatingFlag = 0;
             infostruct.userUsedFullTimeSliceFlag = 0;
             infostruct.userBlockedFlag = 0;
-            infostruct.user_sim_pid = nextProcToRun;
+            infostruct.user_sim_pid = nextP;
             fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
-                    "time %u:%09u\n", nextProcToRun, 
-                    pct[nextProcToRun].currentQueue, 
-                    *simClock_secs, *simClock_ns);
-            if ( msgsnd(oss_qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+                    "time %u:%09u\n", nextP, 
+                    pct[nextP].currentQueue, 
+                    *clockSec, *clockNS);
+            if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
                 perror("OSS: error sending init msg");
                 detach();
                 exit(0);
@@ -373,19 +373,19 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-int isTimeToSpawnProc() {
+int checkTime() {
     int return_val = 0;
-    unsigned int localsec = *simClock_secs;
-    unsigned int localns = *simClock_ns;
-    if ( (localsec > spawnNextProcSecs) || 
-            ( (localsec >= spawnNextProcSecs) && (localns >= spawnNextProcNS) ) ) {
+    unsigned int localsec = *clockSec;
+    unsigned int localns = *clockNS;
+    if ( (localsec > createSec) || 
+            ( (localsec >= createSec) && (localns >= createNS) ) ) {
         return_val = 1;
     }
  
     return return_val;
 }
 
-void blockUser(int blockpid) {
+void block(int blockpid) {
     int temp;
     unsigned int localsec, localns;
     
@@ -399,18 +399,18 @@ void blockUser(int blockpid) {
    
     pct[blockpid].blocked = 1;
     if (pct[blockpid].currentQueue == 0)
-        {removeProcFromQueue(queue0, arraysize, blockpid);}
+        {queueDelete(q0, array, blockpid);}
     else if (pct[blockpid].currentQueue == 1)
-        {removeProcFromQueue(queue1, arraysize, blockpid);}
+        {queueDelete(q1, array, blockpid);}
     else if (pct[blockpid].currentQueue == 2)
-        {removeProcFromQueue(queue2, arraysize, blockpid);}
+        {queueDelete(q2, array, blockpid);}
     else if (pct[blockpid].currentQueue == 3)
-        {removeProcFromQueue(queue3, arraysize, blockpid);}
+        {queueDelete(q3, array, blockpid);}
 
-    addProcToQueue(blocked, arraysize, blockpid);
+    addProcToQueue(blocked, array, blockpid);
 
-    localsec = *simClock_secs;
-    localns = *simClock_ns;
+    localsec = *clockSec;
+    localns = *clockNS;
     temp = roll1000();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
@@ -423,56 +423,56 @@ void blockUser(int blockpid) {
         localns = temp;
     }
    
-    *simClock_secs = localsec;
-    *simClock_ns = localns;
+    *clockSec = localsec;
+    *clockNS = localns;
 }
 
-int getNextProcFromQueue(int q[]) {
+int getChildQ(int q[]) {
     if (q[1] == 0) { 
         return -1;
     }
     else return q[1];
 }
 
-void terminateUser(int termpid) {
+void term(int termpid) {
     int status;
     unsigned int temp;
     waitpid(infostruct.user_sys_pid, &status, 0);
     
-    totalUserLifetime_secs += pct[termpid].totalLIFEtime_secs;
-    totalUserLifetime_ns += pct[termpid].totalLIFEtime_ns;
-    if (totalUserLifetime_ns >= BILLION) {
-        totalUserLifetime_secs++;
-        temp = totalUserLifetime_ns - BILLION;
-        totalUserLifetime_ns = temp;
+    totalSec += pct[termpid].totalLIFEtime_secs;
+    totalNS += pct[termpid].totalLIFEtime_ns;
+    if (totalNS >= BILLION) {
+        totalSec++;
+        temp = totalNS - BILLION;
+        totalNS = temp;
     }
 
     
-    totalWaitTime_secs += 
+    totalWaitSec += 
             (pct[termpid].totalLIFEtime_secs - pct[termpid].totalCPUtime_secs);
-    totalWaitTime_ns +=
+    totalWaitNS +=
             (pct[termpid].totalLIFEtime_ns - pct[termpid].totalCPUtime_ns);
-    if (totalWaitTime_ns >= BILLION) {
-        totalWaitTime_secs++;
-        temp = totalWaitTime_ns - BILLION;
-        totalWaitTime_ns = temp;
+    if (totalWaitNS >= BILLION) {
+        totalWaitSec++;
+        temp = totalWaitNS - BILLION;
+        totalWaitNS = temp;
     }
     
     
     if (pct[termpid].currentQueue == 0) {
-        removeProcFromQueue(queue0, arraysize, termpid);
+        queueDelete(q0, array, termpid);
     }
     else if (pct[termpid].currentQueue == 1) {
-        removeProcFromQueue(queue1, arraysize, termpid);
+        queueDelete(q1, array, termpid);
     }
     else if (pct[termpid].currentQueue == 2) {
-        removeProcFromQueue(queue2, arraysize, termpid);
+        queueDelete(q2, array, termpid);
     }
     else if (pct[termpid].currentQueue == 3) {
-        removeProcFromQueue(queue3, arraysize, termpid);
+        queueDelete(q3, array, termpid);
     }
-    bitVector[termpid] = 0;
-    numCurrentUsers--;
+    bitMap[termpid] = 0;
+    numChild--;
     pct[termpid].totalCPUtime_secs = 0;
     pct[termpid].totalCPUtime_ns = 0;
     pct[termpid].totalLIFEtime_secs = 0;
@@ -481,9 +481,9 @@ void terminateUser(int termpid) {
         infostruct.user_sim_pid);
 }
 
-void incrementSimClockAfterMessageReceipt(int userpid) {
-    unsigned int localsec = *simClock_secs;
-    unsigned int localns = *simClock_ns;
+void incClock(int userpid) {
+    unsigned int localsec = *clockSec;
+    unsigned int localns = *clockNS;
     unsigned int temp;
     temp = roll1000();
     if (temp < 100) temp = 100;
@@ -499,11 +499,11 @@ void incrementSimClockAfterMessageReceipt(int userpid) {
         localns = temp;
     }
     
-    *simClock_secs = localsec;
-    *simClock_ns = localns;
+    *clockSec = localsec;
+    *clockNS = localns;
 }
 
-int removeProcFromQueue(int q[], int arrsize, int proc_num) {
+int queueDelete(int q[], int arrsize, int proc_num) {
     int i;
     for (i=1; i<arrsize; i++) {
         if (q[i] == proc_num) { 
@@ -518,44 +518,44 @@ int removeProcFromQueue(int q[], int arrsize, int proc_num) {
     return -1;
 }
 
-void awakenUser(int wakepid) {
+void getChild(int wakepid) {
     unsigned int localsec, localns, temp;
 
-    removeProcFromQueue(blocked, arraysize, wakepid);
+    queueDelete(blocked, array, wakepid);
 
     pct[wakepid].blocked = 0;
     pct[wakepid].blockedUntilNS = 0;
     pct[wakepid].blockedUntilSecs = 0; 
 
     if (pct[wakepid].isRealTimeClass == 1) {
-        addProcToQueue(queue0, arraysize, wakepid);
+        addProcToQueue(q0, array, wakepid);
         pct[wakepid].currentQueue = 0;
     }
     
     else {
-        addProcToQueue(queue1, arraysize, wakepid);
+        addProcToQueue(q1, array, wakepid);
         pct[wakepid].currentQueue = 1;
     }
 
-    localsec = *simClock_secs;
-    localns = *simClock_ns;
+    localsec = *clockSec;
+    localns = *clockNS;
     temp = roll1000();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
     localns = localns + temp; 
 }
 
-int getNextOccupiedQueue() {
-    if (queue0[1] != 0) {
+int putQueue() {
+    if (q0[1] != 0) {
         return 0;
     }
-    else if (queue1[1] != 0) {
+    else if (q1[1] != 0) {
         return 1;
     }
-    else if (queue2[1] != 0) {
+    else if (q2[1] != 0) {
         return 2;
     }
-    else if (queue3[1] != 0) {
+    else if (q3[1] != 0) {
         return 3;
     }
     else return -1;
@@ -572,39 +572,39 @@ int addProcToQueue (int q[], int arrsize, int proc_num) {
     return -1; 
 }
 
-void setTimeToNextProc()
+void nextPbegin()
 {
 	unsigned int temp;
-	unsigned int localsecs = *simClock_secs;
-	unsigned int localns = *simClock_ns;
-	timeToNextProcSecs = rand_r(&seed) % (maxTimeBetweenProcsSecs + 1);
-    	timeToNextProcNS = rand_r(&seed) % (maxTimeBetweenProcsNS + 1);
-    	spawnNextProcSecs = localsecs + timeToNextProcSecs;
-    	spawnNextProcNS = localns + timeToNextProcNS;
-	if (spawnNextProcNS >= BILLION)
+	unsigned int localsecs = *clockSec;
+	unsigned int localns = *clockNS;
+	nextProcSec = rand_r(&begin) % (maxTimeSec + 1);
+    	nextProcNS = rand_r(&begin) % (maxTimeNS + 1);
+    	createSec = localsecs + nextProcSec;
+    	createNS = localns + nextProcNS;
+	if (createNS >= BILLION)
 	{
-		spawnNextProcSecs++;
-		temp = spawnNextProcNS - BILLION;
-		spawnNextProcNS = temp;
+		createSec++;
+		temp = createNS - BILLION;
+		createNS = temp;
 	}
 }
 
-void spawnNewUser() 
+void createChild() 
 {
     char str_pct_id[20]; 
     char str_user_sim_pid[4]; 
     int user_sim_pid, roll;
     pid_t childpid;
-    setTimeToNextProc(); 
-    user_sim_pid = getOpenBitVector();
+    nextPbegin(); 
+    user_sim_pid = getBitSpot();
     if (user_sim_pid == -1) {
         detach();
         exit(0);
     }
-    numProcsSpawned++;
+    numProc++;
 
-    if (numProcsSpawned >= 10) {
-        allowNewUsers = 0;
+    if (numProc >= 10) {
+        newChild = 0;
     }
     infostruct.msgtyp = user_sim_pid;
     infostruct.userTerminatingFlag = 0;
@@ -613,22 +613,22 @@ void spawnNewUser()
 
     roll = roll1000();
     if (roll < 45) {
-        infostruct.ossTimeSliceGivenNS = quantum_0;
-        makePCB(user_sim_pid, 1);
-        addProcToQueue(queue0, arraysize, user_sim_pid);
+        infostruct.ossTimeSliceGivenNS = cost0;
+        PCB(user_sim_pid, 1);
+        addProcToQueue(q0, array, user_sim_pid);
         pct[user_sim_pid].currentQueue = 0;
     }
 
     else {
-        infostruct.ossTimeSliceGivenNS = quantum_1;
-        makePCB(user_sim_pid, 0);
-        addProcToQueue(queue1, arraysize, user_sim_pid);
+        infostruct.ossTimeSliceGivenNS = cost1;
+        PCB(user_sim_pid, 0);
+        addProcToQueue(q1, array, user_sim_pid);
         pct[user_sim_pid].currentQueue = 1;
     }
     fprintf(fp, "OSS: Generating process PID %d and putting it in queue "
             "%d at time %u:%09u, total spawned: %d\n", 
         pct[user_sim_pid].localPID, pct[user_sim_pid].currentQueue, 
-        *simClock_secs, *simClock_ns, numProcsSpawned);
+        *clockSec, *clockNS, numProc);
     fflush(fp);
     if ( (childpid = fork()) < 0 ){ 
         perror("OSS: Error forking user");
@@ -637,22 +637,22 @@ void spawnNewUser()
         exit(0);
     }
     if (childpid == 0) { 
-        sprintf(str_pct_id, "%d", shmid_pct); 
+        sprintf(str_pct_id, "%d", shmid); 
         sprintf(str_user_sim_pid, "%d", user_sim_pid);
         execlp("./user", "./user", str_pct_id, str_user_sim_pid, (char *)NULL);
         perror("OSS: execl() failure"); 
         exit(0);
     }
-    childpids[user_sim_pid] = childpid;
+    pids[user_sim_pid] = childpid;
 }
 
-int checkBlockedQueue() {
+int blockedCheckTwo() {
     int returnval = 0;
     int j;
     
-    unsigned int localsec = *simClock_secs;
-    unsigned int localns = *simClock_ns;
-    for (j=1; j<arraysize; j++) {
+    unsigned int localsec = *clockSec;
+    unsigned int localns = *clockNS;
+    for (j=1; j<array; j++) {
 
         if (blocked[j] != 0) {
 
@@ -660,7 +660,7 @@ int checkBlockedQueue() {
             ( (localsec >= pct[blocked[j]].blockedUntilSecs) && 
                     (localns >= pct[blocked[j]].blockedUntilNS) ) ) {
  
-                awakenUser(blocked[j]);
+                getChild(blocked[j]);
                 returnval++;
             }
         }
@@ -668,24 +668,24 @@ int checkBlockedQueue() {
     return returnval;
 }
 
-int isBlockedQueueEmpty() {
+int blockedCheck() {
     if (blocked[1] != 0) {
         return 0;
     }
     return 1;
 }
 
-int incrementIdleTime(){
+int incTime(){
     unsigned int temp, localsec, localns, localsim_s, localsim_ns;
     localsec = 0;
-    localsim_s = *simClock_secs;
-    localsim_ns = *simClock_ns;
-    if (localsim_s == spawnNextProcSecs) {
-        localns = (spawnNextProcNS - localsim_ns);
+    localsim_s = *clockSec;
+    localsim_ns = *clockNS;
+    if (localsim_s == createSec) {
+        localns = (createNS - localsim_ns);
     }
     else {
-        localsec = (spawnNextProcSecs - localsim_s);
-        localns = spawnNextProcNS + (BILLION - localsim_ns);
+        localsec = (creaetSec - localsim_s);
+        localns = createNS + (BILLION - localsim_ns);
         localsec--;
     }
     if (localns >= BILLION) {
@@ -693,27 +693,27 @@ int incrementIdleTime(){
         temp = localns - BILLION;
         localns = temp;
     }
-    idleTime_secs = idleTime_secs + localsec; 
-    idleTime_ns = idleTime_ns + localns;
-    if (idleTime_ns >= BILLION) {
-        idleTime_secs++;
-        temp = idleTime_ns - BILLION;
-        idleTime_ns = temp;
+    stopSec = stopSec + localsec; 
+    stopNS = stopNS + localns;
+    if (stopNS >= BILLION) {
+        stopSec++;
+        temp = stopNS - BILLION;
+        stopNS = temp;
     }
     return 1;
 }
 
 int roll1000() {
     int return_val;
-    return_val = rand_r(&seed) % (1000 + 1);
+    return_val = rand_r(&begin) % (1000 + 1);
     return return_val;
 }
 
-int getOpenBitVector() {
+int getBitSpot() {
     int i;
     int return_val = -1;
     for (i=1; i<19; i++) {
-        if (bitVector[i] == 0) {
+        if (bitMap[i] == 0) {
             return_val = i;
             break;
         }
@@ -721,10 +721,10 @@ int getOpenBitVector() {
     return return_val;
 }
 
-void makePCB(int pidnum, int isRealTime) 
+void PCB(int pidnum, int isRealTime) 
 {
-    unsigned int localsec = *simClock_secs;
-    unsigned int localns = *simClock_ns;
+    unsigned int localsec = *clockSec;
+    unsigned int localns = *clockNS;
     pct[pidnum].startTime_secs = 0;
     pct[pidnum].startTime_ns = 0;
     pct[pidnum].totalCPUtime_secs = 0;
@@ -747,10 +747,10 @@ void makePCB(int pidnum, int isRealTime)
     else {
         pct[pidnum].currentQueue = 1;
     }
-    bitVector[pidnum] = 1;
+    bitMap[pidnum] = 1;
 }
 
-void initQueue(int q[], int size) 
+void queue(int q[], int size) 
 {
     int i;
     for(i=0; i<size; i++) {
@@ -758,43 +758,43 @@ void initQueue(int q[], int size)
     }
 }
 
-void initBitVector(int n) 
+void bitMap(int n) 
 {
     int i;
     for (i=0; i<n; i++) {
-        bitVector[i] = 0;
+        bitMap[i] = 0;
     }
 }
 
 void setUp() 
 {   
-    shmid_pct = shmget(SHMKEY_pct, 19*sizeof(struct pcb), 0777 | IPC_CREAT);
-     if (shmid_pct == -1) { 
-            perror("OSS: error in shmget shmid_pct");
+    shmid = shmget(SHMKEY_pct, 19*sizeof(struct pcb), 0777 | IPC_CREAT);
+     if (shmid == -1) { 
+            perror("OSS: error in shmget");
             exit(1);
         }
-    pct = (struct pcb *)shmat(shmid_pct, 0, 0);
+    pct = (struct pcb *)shmat(shmid, 0, 0);
     if ( pct == (struct pcb *)(-1) ) {
-        perror("OSS: error in shmat pct");
+        perror("OSS: error in shmat");
         exit(1);
     }   
 
-    shmid_sim_secs = shmget(SHMKEY_sim_s, BUFF_SZ, 0777 | IPC_CREAT);
-        if (shmid_sim_secs == -1) { 
-            perror("OSS: error in shmget shmid_sim_secs");
+    smSec = shmget(SHMKEY_sim_s, BUFF_SZ, 0777 | IPC_CREAT);
+        if (smSec == -1) { 
+            perror("OSS: error in shmget");
             exit(1);
         }
-    simClock_secs = (unsigned int*) shmat(shmid_sim_secs, 0, 0);
+    clockSec = (unsigned int*) shmat(smSec, 0, 0);
 
-    shmid_sim_ns = shmget(SHMKEY_sim_ns, BUFF_SZ, 0777 | IPC_CREAT);
-        if (shmid_sim_ns == -1) { 
-            perror("OSS: error in shmget shmid_sim_ns");
+    smNS = shmget(SHMKEY_sim_ns, BUFF_SZ, 0777 | IPC_CREAT);
+        if (smNS == -1) { 
+            perror("OSS: error in shmget");
             exit(1);
         }
-    simClock_ns = (unsigned int*) shmat(shmid_sim_ns, 0, 0);
+    clockNS = (unsigned int*) shmat(smNS, 0, 0);
     
 
-    if ( (oss_qid = msgget(MSGQKEY_oss, 0777 | IPC_CREAT)) == -1 ) {
+    if ( (qid = msgget(MSGQKEY_oss, 0777 | IPC_CREAT)) == -1 ) {
         perror("Error generating communication message queue");
         exit(0);
     }
@@ -802,18 +802,18 @@ void setUp()
 
 void detach() 
 {
-    if ( shmctl(shmid_sim_secs, IPC_RMID, NULL) == -1) {
+    if ( shmctl(smSec, IPC_RMID, NULL) == -1) {
         perror("error removing shared memory");
     }
-    if ( shmctl(shmid_sim_ns, IPC_RMID, NULL) == -1) {
-        perror("error removing shared memory");
-    }
-
-    if ( shmctl(shmid_pct, IPC_RMID, NULL) == -1) {
+    if ( shmctl(smNS, IPC_RMID, NULL) == -1) {
         perror("error removing shared memory");
     }
 
-    if ( msgctl(oss_qid, IPC_RMID, NULL) == -1 ) {
+    if ( shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("error removing shared memory");
+    }
+
+    if ( msgctl(qid, IPC_RMID, NULL) == -1 ) {
         perror("OSS: Error removing ODD message queue");
         exit(0);
     }
