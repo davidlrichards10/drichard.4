@@ -1,10 +1,3 @@
-/*
- * Name: David Richards
- * Assignment: CS4760 Project 4
- * Date: tue March 24th
- * File: "user.c"
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,26 +9,26 @@
 #include "shared.h"
 
 void getSM();
-int randomTime(); 
-void showTime();
-void terminated();
-void blocked();
-void started();
-unsigned int randomSTime();
+int roll1000(); 
+void reportFinishedTimeSlice();
+void reportTermination();
+void reportBlocked();
+void reportPreempted();
+unsigned int randomPortionOfTimeSlice();
 void compileStats();
-void incTime();
-void incBlockedTime();
+void incrementCPUtime();
+void incrementBlockedTime();
 
-int smSec, smNS; 
-int sm; 
-int qid; 
-static unsigned int *clockSec; 
-static unsigned int *clockNS; 
-unsigned int startSec;
-unsigned int startNS; 
-int simPid; 
-int begin;
-unsigned int bSec, bNS;
+int shmid_sim_secs, shmid_sim_ns; 
+int shmid_pct; 
+int oss_qid; 
+static unsigned int *simClock_secs; 
+static unsigned int *simClock_ns; 
+unsigned int myStartTimeSecs;
+unsigned int myStartTimeNS; 
+int my_sim_pid; 
+int seed;
+unsigned int b_sec, b_ns;
 
 struct pcb * pct; 
 
@@ -43,50 +36,50 @@ struct messageQueue mstruct;
 
 int main(int argc, char** argv) 
 {
-	 unsigned int localSec, localNS;
+	 unsigned int localsec, localns;
     mstruct.userPid = getpid();
-    sm = atoi(argv[1]);
-    simPid = atoi(argv[2]);
+    shmid_pct = atoi(argv[1]);
+    my_sim_pid = atoi(argv[2]);
     int roll;
 	getSM();
-	pct[simPid].startSec = *clockSec; 
-    pct[simPid].startNS = *clockNS;
+	pct[my_sim_pid].startSec = *simClock_secs; 
+    pct[my_sim_pid].startNS = *simClock_ns;
 
 	while(1) {
-        if ( msgrcv(qid, &mstruct, sizeof(mstruct), simPid, 0) == -1 ) {
+        if ( msgrcv(oss_qid, &mstruct, sizeof(mstruct), my_sim_pid, 0) == -1 ) {
             exit(0);
         }
         mstruct.userPid = getpid(); 
         
         
-        roll = randomTime();
+        roll = roll1000();
         if (roll < 15) {
             
-            mstruct.burst = randomSTime();
-            incTime();
+            mstruct.burst = randomPortionOfTimeSlice();
+            incrementCPUtime();
             compileStats();
-            terminated();
+            reportTermination();
             return 1;
         }
         
         else if (roll < 17) {
             
-            localSec = *clockSec; 
-            localNS = *clockNS;
-            bNS = rand_r(&begin) % 1000 + 1;
-            bSec = rand_r(&begin) % 5 + 1;
-            pct[simPid].bSec = localSec + bSec;
-            pct[simPid].bNS = localNS + bNS;
-            incBlockedTime();
-            pct[simPid].bTimes++;
-            blocked();
+            localsec = *simClock_secs; 
+            localns = *simClock_ns;
+            b_ns = rand_r(&seed) % 1000 + 1;
+            b_sec = rand_r(&seed) % 5 + 1;
+            pct[my_sim_pid].bSec = localsec + b_sec;
+            pct[my_sim_pid].bNS = localns + b_ns;
+            incrementBlockedTime();
+            pct[my_sim_pid].bTimes++;
+            reportBlocked();
         }
         
         else if (roll < 260) {
-            started();
+            reportPreempted();
         }
         else {
-            showTime();
+            reportFinishedTimeSlice();
         }
 
     }
@@ -97,148 +90,148 @@ int main(int argc, char** argv)
 void getSM() 
 {
     
-    pct = (struct pcb *)shmat(sm, 0, 0);
+    pct = (struct pcb *)shmat(shmid_pct, 0, 0);
     if ( pct == (struct pcb *)(-1) ) {
         perror("User: error in shmat pct");
         exit(1);
     }
     
-    smSec = shmget(SHMKEY_sim_s, BUFF_SZ, 0444);
-        if (smSec == -1) { 
-            perror("User: error in shmget smSec");
+    shmid_sim_secs = shmget(SHMKEY_sim_s, BUFF_SZ, 0444);
+        if (shmid_sim_secs == -1) { 
+            perror("User: error in shmget shmid_sim_secs");
             exit(1);
         }
-    clockSec = (unsigned int*) shmat(smSec, 0, 0);
+    simClock_secs = (unsigned int*) shmat(shmid_sim_secs, 0, 0);
     
-    smNS = shmget(SHMKEY_sim_ns, BUFF_SZ, 0444);
-        if (smNS == -1) { 
-            perror("User: error in shmget smNS");
+    shmid_sim_ns = shmget(SHMKEY_sim_ns, BUFF_SZ, 0444);
+        if (shmid_sim_ns == -1) { 
+            perror("User: error in shmget shmid_sim_ns");
             exit(1);
         }
-    clockNS = (unsigned int*) shmat(smNS, 0, 0);
+    simClock_ns = (unsigned int*) shmat(shmid_sim_ns, 0, 0);
     
     
-    if ( (qid = msgget(MSGQKEY_oss, 0777)) == -1 ) {
+    if ( (oss_qid = msgget(MSGQKEY_oss, 0777)) == -1 ) {
         perror("Error generating communication message queue");
         exit(0);
     }
 }
 
-void incBlockedTime() {
-    unsigned int seconds = *clockSec;
-    unsigned int nanoseconds = *clockNS;
+void incrementBlockedTime() {
+    unsigned int now_secs = *simClock_secs;
+    unsigned int now_ns = *simClock_ns;
     unsigned int temp = 0;
     
-    pct[simPid].bWholeSec += bSec; 
-    pct[simPid].bWholeNS += bNS;
-    if (pct[simPid].bWholeNS >= MAX) {
-        pct[simPid].bWholeSec++;
-        temp = pct[simPid].bWholeNS - MAX;
-        pct[simPid].bWholeNS = temp;
+    pct[my_sim_pid].bWholeSec += b_sec; 
+    pct[my_sim_pid].bWholeNS += b_ns;
+    if (pct[my_sim_pid].bWholeNS >= MAX) {
+        pct[my_sim_pid].bWholeSec++;
+        temp = pct[my_sim_pid].bWholeNS - MAX;
+        pct[my_sim_pid].bWholeNS = temp;
     }
             
             
 }
 
-void incTime() {
+void incrementCPUtime() {
     unsigned int temp = 0;
-    pct[simPid].totalNS += mstruct.burst;
-    if (pct[simPid].totalNS >= MAX) {
-        pct[simPid].totalSec++;
-        temp = pct[simPid].totalNS - MAX;
-        pct[simPid].totalNS = temp;
+    pct[my_sim_pid].totalNS += mstruct.burst;
+    if (pct[my_sim_pid].totalNS >= MAX) {
+        pct[my_sim_pid].totalSec++;
+        temp = pct[my_sim_pid].totalNS - MAX;
+        pct[my_sim_pid].totalNS = temp;
     }
 }
 
 void compileStats() {
     
-    unsigned int endSec = *clockSec; 
-    unsigned int endNS = *clockNS;
+    unsigned int myEndTimeSecs = *simClock_secs; 
+    unsigned int myEndTimeNS = *simClock_ns;
     unsigned int temp;
 
-    if (endSec == pct[simPid].startSec) {
-        pct[simPid].totalWholeNS = 
-                (endNS - pct[simPid].startNS);
-        pct[simPid].totalWholeSec = 0;
+    if (myEndTimeSecs == pct[my_sim_pid].startSec) {
+        pct[my_sim_pid].totalWholeNS = 
+                (myEndTimeNS - pct[my_sim_pid].startNS);
+        pct[my_sim_pid].totalWholeSec = 0;
     }
     else {
-        pct[simPid].totalWholeSec = 
-                endSec - pct[simPid].startSec;
-        pct[simPid].totalWholeNS = 
-                endNS + (MAX - pct[simPid].startNS);
-        pct[simPid].totalWholeSec--;
+        pct[my_sim_pid].totalWholeSec = 
+                myEndTimeSecs - pct[my_sim_pid].startSec;
+        pct[my_sim_pid].totalWholeNS = 
+                myEndTimeNS + (MAX - pct[my_sim_pid].startNS);
+        pct[my_sim_pid].totalWholeSec--;
     }
-    if (pct[simPid].totalWholeNS >= MAX) {
-        pct[simPid].totalWholeSec++;
-        temp = pct[simPid].totalWholeNS - MAX;
-        pct[simPid].totalWholeNS = temp;
+    if (pct[my_sim_pid].totalWholeNS >= MAX) {
+        pct[my_sim_pid].totalWholeSec++;
+        temp = pct[my_sim_pid].totalWholeNS - MAX;
+        pct[my_sim_pid].totalWholeNS = temp;
     }
     
 }
 
 
-void showTime() {
-    incTime();
+void reportFinishedTimeSlice() {
+    incrementCPUtime();
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 0;
     mstruct.timeFlg = 1;
     mstruct.burst = mstruct.timeGivenNS;
-    mstruct.sPid = simPid;
+    mstruct.sPid = my_sim_pid;
     mstruct.msgTyp = 99;
-    if ( msgsnd(qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
 }
 
-void started() {
+void reportPreempted() {
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 0;
     mstruct.timeFlg = 0;
-    mstruct.burst = randomSTime();
-    incTime();
-    mstruct.sPid = simPid;
+    mstruct.burst = randomPortionOfTimeSlice();
+    incrementCPUtime();
+    mstruct.sPid = my_sim_pid;
     mstruct.msgTyp = 99;
-    if ( msgsnd(qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
 }
 
 
-void terminated() {
+void reportTermination() {
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 1;
     mstruct.timeFlg = 0;
-    mstruct.sPid = simPid;
+    mstruct.sPid = my_sim_pid;
     mstruct.msgTyp = 99;
     
-    if ( msgsnd(qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
 }
 
-unsigned int randomSTime() {
-    unsigned int value;
-    value = (rand_r(&begin) % (mstruct.timeGivenNS) + 1);
-    return value;
+unsigned int randomPortionOfTimeSlice() {
+    unsigned int return_val;
+    return_val = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
+    return return_val;
 }
 
-void blocked() {
+void reportBlocked() {
     mstruct.msgTyp = 99;
     mstruct.timeFlg = 0;
-    mstruct.burst = rand_r(&begin) % 99 + 1;
-    incTime();
+    mstruct.burst = rand_r(&seed) % 99 + 1;
+    incrementCPUtime();
     mstruct.blockedFlg = 1;
-    if ( msgsnd(qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
 }
 
-int randomTime() {
-    int value;
-    value = rand_r(&begin) % 1000 + 1;
-    return value;
+int roll1000() {
+    int return_val;
+    return_val = rand_r(&seed) % 1000 + 1;
+    return return_val;
 }
