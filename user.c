@@ -9,15 +9,16 @@
 #include "shared.h"
 
 void getSM();
-int roll1000(); 
-void reportFinishedTimeSlice();
-void reportTermination();
-void reportBlocked();
-void reportPreempted();
-unsigned int randomPortionOfTimeSlice();
+int randomTime(); 
+void showTime();
+void terminated();
+void blocked();
+void started();
+unsigned int randomSTime();
 void compileStats();
-void incrementCPUtime();
-void incrementBlockedTime();
+void incTime ();
+void incBlockedTime ();
+
 
 int shmid_sim_secs, shmid_sim_ns; 
 int shmid_pct; 
@@ -52,13 +53,13 @@ int main(int argc, char** argv)
         mstruct.userPid = getpid(); 
         
         
-        roll = roll1000();
+        roll = randomTime();
         if (roll < 15) {
             
-            mstruct.burst = randomPortionOfTimeSlice();
-            incrementCPUtime();
+            mstruct.burst = randomSTime();
+            incTime();
             compileStats();
-            reportTermination();
+            terminated();
             return 1;
         }
         
@@ -70,16 +71,16 @@ int main(int argc, char** argv)
             b_sec = rand_r(&seed) % 5 + 1;
             pct[my_sim_pid].bSec = localsec + b_sec;
             pct[my_sim_pid].bNS = localns + b_ns;
-            incrementBlockedTime();
+            incBlockedTime();
             pct[my_sim_pid].bTimes++;
-            reportBlocked();
+            blocked();
         }
         
         else if (roll < 260) {
-            reportPreempted();
+            started();
         }
         else {
-            reportFinishedTimeSlice();
+            showTime();
         }
 
     }
@@ -117,7 +118,7 @@ void getSM()
     }
 }
 
-void incrementBlockedTime() {
+void incBlockedTime() {
     unsigned int now_secs = *simClock_secs;
     unsigned int now_ns = *simClock_ns;
     unsigned int temp = 0;
@@ -133,7 +134,7 @@ void incrementBlockedTime() {
             
 }
 
-void incrementCPUtime() {
+void incTime() {
     unsigned int temp = 0;
     pct[my_sim_pid].totalNS += mstruct.burst;
     if (pct[my_sim_pid].totalNS >= MAX) {
@@ -170,8 +171,8 @@ void compileStats() {
 }
 
 
-void reportFinishedTimeSlice() {
-    incrementCPUtime();
+void showTime() {
+    incTime();
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 0;
     mstruct.timeFlg = 1;
@@ -184,12 +185,12 @@ void reportFinishedTimeSlice() {
     }
 }
 
-void reportPreempted() {
+void started() {
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 0;
     mstruct.timeFlg = 0;
-    mstruct.burst = randomPortionOfTimeSlice();
-    incrementCPUtime();
+    mstruct.burst = randomSTime();
+    incTime();
     mstruct.sPid = my_sim_pid;
     mstruct.msgTyp = 99;
     if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
@@ -199,7 +200,7 @@ void reportPreempted() {
 }
 
 
-void reportTermination() {
+void terminated() {
     mstruct.blockedFlg = 0;
     mstruct.termFlg = 1;
     mstruct.timeFlg = 0;
@@ -212,17 +213,17 @@ void reportTermination() {
     }
 }
 
-unsigned int randomPortionOfTimeSlice() {
+unsigned int randomSTime() {
     unsigned int return_val;
     return_val = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
     return return_val;
 }
 
-void reportBlocked() {
+void blocked() {
     mstruct.msgTyp = 99;
     mstruct.timeFlg = 0;
     mstruct.burst = rand_r(&seed) % 99 + 1;
-    incrementCPUtime();
+    incTime();
     mstruct.blockedFlg = 1;
     if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
@@ -230,7 +231,7 @@ void reportBlocked() {
     }
 }
 
-int roll1000() {
+int randomTime() {
     int return_val;
     return_val = rand_r(&seed) % 1000 + 1;
     return return_val;
