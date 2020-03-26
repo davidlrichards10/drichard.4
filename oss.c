@@ -26,7 +26,7 @@ void sigErrors(int signum);
 void bitMapF(int n);
 void queue(int[], int);
 void nextPbegin();
-void PCB(int pidnum, int isRealTime);
+void PCB(int pidnum, int realTime);
 int getBitSpot();
 int roll1000();
 int putQueue();
@@ -51,7 +51,7 @@ unsigned int stopNS = 0;
 int shmid;
 int qid;
 int array = 19;
-unsigned int maxTimeNS, maxTimeSec;
+unsigned int maxNS, maxSec;
 unsigned int nextProcNS, nextProcSec, begin;
 unsigned int createNS, createSec;
 static unsigned int *clockSec; //pointer to shm sim clock (seconds)
@@ -111,15 +111,15 @@ int main(int argc, char** argv)
 
 	int finishThem = 0;
     	int i; 
-   	double realTimeElapsed = 0;
-    	double runtimeAllowed = 10; 
-    	maxTimeNS = 999999998;
-    	maxTimeSec = 0;
+   	double realTimeGone = 0;
+    	double fullTime = 10; 
+    	maxNS = 999999998;
+    	maxSec = 0;
     	begin = (unsigned int) getpid(); 
     	pid_t childpid; 
-    	char str_pct_id[20]; 
-    	char str_user_sim_pid[4]; 
-   	int user_sim_pid;
+    	char id[20]; 
+    	char childSPid[4]; 
+   	int sPid;
     	int firstblocked;	
 
 	if (signal(SIGINT, sigErrors) == SIG_ERR) //sigerror on cntrl-c
@@ -145,9 +145,9 @@ int main(int argc, char** argv)
 	
 	while (1) 
 	{
-		    if (realTimeElapsed < runtimeAllowed) {
-            realTimeElapsed = (double)(time(NULL) - start);
-            if (realTimeElapsed >= runtimeAllowed) {
+		    if (realTimeGone < fullTime) {
+            realTimeGone = (double)(time(NULL) - start);
+            if (realTimeGone >= fullTime) {
                 newChild = 0;
             }
         }
@@ -186,8 +186,8 @@ int main(int argc, char** argv)
                                 
                 numChild++;
                 fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
-                    "time %u:%09u\n", infostruct.user_sim_pid ,
-                        pct[infostruct.user_sim_pid].currentQueue,
+                    "time %u:%09u\n", infostruct.sPid ,
+                        pct[infostruct.sPid].currentQueue,
                         *clockSec, *clockNS);
                 if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
                     perror("OSS: error sending init msg");
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
                     infostruct.userTerminatingFlag = 0;
                     infostruct.userUsedFullTimeSliceFlag = 0;
                     infostruct.userBlockedFlag = 0;
-                    infostruct.user_sim_pid = nextP;
+                    infostruct.sPid = nextP;
                     fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
                     pct[nextP].currentQueue, 
@@ -239,44 +239,44 @@ int main(int argc, char** argv)
         blocked[1] = firstblocked; 
         
 
-        pct[infostruct.user_sim_pid].timeUsedLastBurst_ns = 
+        pct[infostruct.sPid].timeUsedLastBurst_ns = 
                 infostruct.userTimeUsedLastBurst;
         
-        incClock(infostruct.user_sim_pid);
+        incClock(infostruct.sPid);
 
 	 if (infostruct.userTerminatingFlag == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u"
                     " nanoseconds and "
-                    "then terminated\n", infostruct.user_sim_pid,
+                    "then terminated\n", infostruct.sPid,
                     infostruct.userTimeUsedLastBurst);
-            term(infostruct.user_sim_pid);
+            term(infostruct.sPid);
         }
        
         else if (infostruct.userBlockedFlag == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds and "
                     "then was blocked by an event. Moving to blocked queue\n", 
-                    infostruct.user_sim_pid, infostruct.userTimeUsedLastBurst);
-            block(infostruct.user_sim_pid);
+                    infostruct.sPid, infostruct.userTimeUsedLastBurst);
+            block(infostruct.sPid);
         }
         
         else if (infostruct.userUsedFullTimeSliceFlag == 0) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds, not "
-                    "using its entire quantum", infostruct.user_sim_pid,
+                    "using its entire quantum", infostruct.sPid,
                     infostruct.userTimeUsedLastBurst);
          
-            if (pct[infostruct.user_sim_pid].currentQueue == 2) {
+            if (pct[infostruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 1\n");
-                queueDelete(q2, array, infostruct.user_sim_pid);
-                addProcToQueue(q1, array, infostruct.user_sim_pid);
-                pct[infostruct.user_sim_pid].currentQueue = 1;
+                queueDelete(q2, array, infostruct.sPid);
+                addProcToQueue(q1, array, infostruct.sPid);
+                pct[infostruct.sPid].currentQueue = 1;
             }
-            else if (pct[infostruct.user_sim_pid].currentQueue == 3) {
+            else if (pct[infostruct.sPid].currentQueue == 3) {
                 fprintf(fp, ", moving to queue 1\n");
-                queueDelete(q3, array, infostruct.user_sim_pid);
-                addProcToQueue(q1, array, infostruct.user_sim_pid);
-                pct[infostruct.user_sim_pid].currentQueue = 1;
+                queueDelete(q3, array, infostruct.sPid);
+                addProcToQueue(q1, array, infostruct.sPid);
+                pct[infostruct.sPid].currentQueue = 1;
             }
             else {
                 fprintf(fp, "\n");
@@ -285,21 +285,21 @@ int main(int argc, char** argv)
 	  else if (infostruct.userUsedFullTimeSliceFlag == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds", 
-                    infostruct.user_sim_pid,
+                    infostruct.sPid,
                     infostruct.userTimeUsedLastBurst);
             
-            if (pct[infostruct.user_sim_pid].currentQueue == 1) {
+            if (pct[infostruct.sPid].currentQueue == 1) {
                 fprintf(fp, ", moving to queue 2\n");
-                queueDelete(q1, array, infostruct.user_sim_pid);
-                addProcToQueue(q2, array, infostruct.user_sim_pid);
-                pct[infostruct.user_sim_pid].currentQueue = 2;
+                queueDelete(q1, array, infostruct.sPid);
+                addProcToQueue(q2, array, infostruct.sPid);
+                pct[infostruct.sPid].currentQueue = 2;
             }
          
-            else if (pct[infostruct.user_sim_pid].currentQueue == 2) {
+            else if (pct[infostruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 3\n");
-                queueDelete(q2, array, infostruct.user_sim_pid);
-                addProcToQueue(q3, array, infostruct.user_sim_pid);
-                pct[infostruct.user_sim_pid].currentQueue = 3;
+                queueDelete(q2, array, infostruct.sPid);
+                addProcToQueue(q3, array, infostruct.sPid);
+                pct[infostruct.sPid].currentQueue = 3;
             }
             else {
                 fprintf(fp, "\n");
@@ -354,7 +354,7 @@ int main(int argc, char** argv)
             infostruct.userTerminatingFlag = 0;
             infostruct.userUsedFullTimeSliceFlag = 0;
             infostruct.userBlockedFlag = 0;
-            infostruct.user_sim_pid = nextP;
+            infostruct.sPid = nextP;
             fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
                     pct[nextP].currentQueue, 
@@ -374,20 +374,20 @@ int main(int argc, char** argv)
 }
 
 int checkTime() {
-    int return_val = 0;
-    unsigned int localsec = *clockSec;
-    unsigned int localns = *clockNS;
-    if ( (localsec > createSec) || 
-            ( (localsec >= createSec) && (localns >= createNS) ) ) {
-        return_val = 1;
+    int rvalue = 0;
+    unsigned int localSec = *clockSec;
+    unsigned int localNS = *clockNS;
+    if ( (localSec > createSec) || 
+            ( (localSec >= createSec) && (localns >= createNS) ) ) {
+        rvalue = 1;
     }
  
-    return return_val;
+    return rvalue;
 }
 
 void block(int blockpid) {
     int temp;
-    unsigned int localsec, localns;
+    unsigned int localSec, localNS;
     
     totalBlockedTime_secs += pct[blockpid].totalBlockedTime_secs;
     totalBlockedTime_ns += pct[blockpid].totalBlockedTime_ns;
@@ -409,17 +409,17 @@ void block(int blockpid) {
 
     addProcToQueue(blocked, array, blockpid);
 
-    localsec = *clockSec;
-    localns = *clockNS;
+    localSec = *clockSec;
+    localNS = *clockNS;
     temp = roll1000();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
     localns = localns + temp; 
     fprintf(fp, "OSS: Time used to move user to blocked queue: %u "
             "nanoseconds\n", temp);
-    if (localns >= BILLION) {
-        localsec++;
-        temp = localns - BILLION;
+    if (localNS >= BILLION) {
+        localSec++;
+        temp = localNS - BILLION;
         localns = temp;
     }
    
@@ -434,13 +434,13 @@ int getChildQ(int q[]) {
     else return q[1];
 }
 
-void term(int termpid) {
+void term(int termPid) {
     int status;
     unsigned int temp;
     waitpid(infostruct.user_sys_pid, &status, 0);
     
-    totalSec += pct[termpid].totalLIFEtime_secs;
-    totalNS += pct[termpid].totalLIFEtime_ns;
+    totalSec += pct[termPid].totalLIFEtime_secs;
+    totalNS += pct[termPid].totalLIFEtime_ns;
     if (totalNS >= BILLION) {
         totalSec++;
         temp = totalNS - BILLION;
@@ -449,9 +449,9 @@ void term(int termpid) {
 
     
     totalWaitSec += 
-            (pct[termpid].totalLIFEtime_secs - pct[termpid].totalCPUtime_secs);
+            (pct[termPid].totalLIFEtime_secs - pct[termPid].totalCPUtime_secs);
     totalWaitNS +=
-            (pct[termpid].totalLIFEtime_ns - pct[termpid].totalCPUtime_ns);
+            (pct[termPid].totalLIFEtime_ns - pct[termPid].totalCPUtime_ns);
     if (totalWaitNS >= BILLION) {
         totalWaitSec++;
         temp = totalWaitNS - BILLION;
@@ -459,29 +459,29 @@ void term(int termpid) {
     }
     
     
-    if (pct[termpid].currentQueue == 0) {
-        queueDelete(q0, array, termpid);
+    if (pct[termPid].currentQueue == 0) {
+        queueDelete(q0, array, termPid);
     }
-    else if (pct[termpid].currentQueue == 1) {
-        queueDelete(q1, array, termpid);
+    else if (pct[termPid].currentQueue == 1) {
+        queueDelete(q1, array, termPid);
     }
-    else if (pct[termpid].currentQueue == 2) {
-        queueDelete(q2, array, termpid);
+    else if (pct[termPid].currentQueue == 2) {
+        queueDelete(q2, array, termPid);
     }
-    else if (pct[termpid].currentQueue == 3) {
-        queueDelete(q3, array, termpid);
+    else if (pct[termPid].currentQueue == 3) {
+        queueDelete(q3, array, termPid);
     }
-    bitMap[termpid] = 0;
+    bitMap[termPid] = 0;
     numChild--;
-    pct[termpid].totalCPUtime_secs = 0;
-    pct[termpid].totalCPUtime_ns = 0;
-    pct[termpid].totalLIFEtime_secs = 0;
-    pct[termpid].totalLIFEtime_ns = 0;
+    pct[termPid].totalCPUtime_secs = 0;
+    pct[termPid].totalCPUtime_ns = 0;
+    pct[termPid].totalLIFEtime_secs = 0;
+    pct[termPid].totalLIFEtime_ns = 0;
     fprintf(fp,"OSS: User %d has terminated\n",
-        infostruct.user_sim_pid);
+        infostruct.sPid);
 }
 
-void incClock(int userpid) {
+void incClock(int childPid) {
     unsigned int localsec = *clockSec;
     unsigned int localns = *clockNS;
     unsigned int temp;
@@ -491,7 +491,7 @@ void incClock(int userpid) {
     localns = localns + temp; 
     fprintf(fp, "OSS: Time spent this dispatch: %ld nanoseconds\n", temp);
     
-    localns = localns + pct[userpid].timeUsedLastBurst_ns;
+    localns = localns + pct[childPid].timeUsedLastBurst_ns;
     
     if (localns >= BILLION) {
         localsec++;
@@ -503,10 +503,10 @@ void incClock(int userpid) {
     *clockNS = localns;
 }
 
-int queueDelete(int q[], int arrsize, int proc_num) {
+int queueDelete(int q[], int arrsize, int pNum) {
     int i;
     for (i=1; i<arrsize; i++) {
-        if (q[i] == proc_num) { 
+        if (q[i] == pNum) { 
             while(i+1 < arrsize) { 
                 q[i] = q[i+1];
                 i++;
@@ -561,11 +561,11 @@ int putQueue() {
     else return -1;
 }
 
-int addProcToQueue (int q[], int arrsize, int proc_num) {
+int addProcToQueue (int q[], int arrsize, int pNum) {
     int i;
     for (i=1; i<arrsize; i++) {
         if (q[i] == 0) { 
-            q[i] = proc_num;
+            q[i] = pNum;
             return 1;
         }
     }
@@ -577,8 +577,8 @@ void nextPbegin()
 	unsigned int temp;
 	unsigned int localsecs = *clockSec;
 	unsigned int localns = *clockNS;
-	nextProcSec = rand_r(&begin) % (maxTimeSec + 1);
-    	nextProcNS = rand_r(&begin) % (maxTimeNS + 1);
+	nextProcSec = rand_r(&begin) % (maxSec + 1);
+    	nextProcNS = rand_r(&begin) % (maxNS + 1);
     	createSec = localsecs + nextProcSec;
     	createNS = localns + nextProcNS;
 	if (createNS >= BILLION)
@@ -591,13 +591,13 @@ void nextPbegin()
 
 void createChild() 
 {
-    char str_pct_id[20]; 
-    char str_user_sim_pid[4]; 
-    int user_sim_pid, roll;
+    char id[20]; 
+    char childSPid[4]; 
+    int sPid, roll;
     pid_t childpid;
     nextPbegin(); 
-    user_sim_pid = getBitSpot();
-    if (user_sim_pid == -1) {
+    sPid = getBitSpot();
+    if (sPid == -1) {
         detach();
         exit(0);
     }
@@ -606,28 +606,28 @@ void createChild()
     if (numProc >= 10) {
         newChild = 0;
     }
-    infostruct.msgtyp = user_sim_pid;
+    infostruct.msgtyp = sPid;
     infostruct.userTerminatingFlag = 0;
     infostruct.userUsedFullTimeSliceFlag = 0;
-    infostruct.user_sim_pid = user_sim_pid;
+    infostruct.sPid = sPid;
 
     roll = roll1000();
     if (roll < 45) {
         infostruct.ossTimeSliceGivenNS = cost0;
-        PCB(user_sim_pid, 1);
-        addProcToQueue(q0, array, user_sim_pid);
-        pct[user_sim_pid].currentQueue = 0;
+        PCB(sPid, 1);
+        addProcToQueue(q0, array, sPid);
+        pct[sPid].currentQueue = 0;
     }
 
     else {
         infostruct.ossTimeSliceGivenNS = cost1;
-        PCB(user_sim_pid, 0);
-        addProcToQueue(q1, array, user_sim_pid);
-        pct[user_sim_pid].currentQueue = 1;
+        PCB(sPid, 0);
+        addProcToQueue(q1, array, sPid);
+        pct[sPid].currentQueue = 1;
     }
     fprintf(fp, "OSS: Generating process PID %d and putting it in queue "
             "%d at time %u:%09u, total spawned: %d\n", 
-        pct[user_sim_pid].localPID, pct[user_sim_pid].currentQueue, 
+        pct[sPid].localPID, pct[sPid].currentQueue, 
         *clockSec, *clockNS, numProc);
     fflush(fp);
     if ( (childpid = fork()) < 0 ){ 
@@ -637,13 +637,13 @@ void createChild()
         exit(0);
     }
     if (childpid == 0) { 
-        sprintf(str_pct_id, "%d", shmid); 
-        sprintf(str_user_sim_pid, "%d", user_sim_pid);
-        execlp("./user", "./user", str_pct_id, str_user_sim_pid, (char *)NULL);
+        sprintf(id, "%d", shmid); 
+        sprintf(childSPid, "%d", sPid);
+        execlp("./user", "./user", id, childSPid, (char *)NULL);
         perror("OSS: execl() failure"); 
         exit(0);
     }
-    pids[user_sim_pid] = childpid;
+    pids[sPid] = childpid;
 }
 
 int blockedCheckTwo() {
@@ -704,27 +704,27 @@ int incTime(){
 }
 
 int roll1000() {
-    int return_val;
-    return_val = rand_r(&begin) % (1000 + 1);
-    return return_val;
+    int rvalue;
+    rvalue = rand_r(&begin) % (1000 + 1);
+    return rvalue;
 }
 
 int getBitSpot() {
     int i;
-    int return_val = -1;
+    int rvalue = -1;
     for (i=1; i<19; i++) {
         if (bitMap[i] == 0) {
-            return_val = i;
+            rvalue = i;
             break;
         }
     }
-    return return_val;
+    return rvalue;
 }
 
-void PCB(int pidnum, int isRealTime) 
+void PCB(int pidnum, int realTime) 
 {
-    unsigned int localsec = *clockSec;
-    unsigned int localns = *clockNS;
+    unsigned int localSec = *clockSec;
+    unsigned int localNS = *clockNS;
     pct[pidnum].startTime_secs = 0;
     pct[pidnum].startTime_ns = 0;
     pct[pidnum].totalCPUtime_secs = 0;
@@ -739,9 +739,9 @@ void PCB(int pidnum, int isRealTime)
     pct[pidnum].totalBlockedTime_secs = 0;
     pct[pidnum].totalBlockedTime_ns = 0;
     pct[pidnum].localPID = pidnum; 
-    pct[pidnum].isRealTimeClass = isRealTime;
+    pct[pidnum].isRealTimeClass = realTime;
 
-    if (isRealTime == 1) {
+    if (realTime == 1) {
         pct[pidnum].currentQueue = 0;
     }
     else {
