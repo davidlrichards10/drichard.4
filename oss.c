@@ -28,7 +28,7 @@ void queue(int[], int);
 void nextPbegin();
 void PCB(int pidnum, int realTime);
 int getBitSpot();
-int roll1000();
+int random();
 int putQueue();
 void createChild();
 int blockedCheck();
@@ -81,7 +81,7 @@ FILE* fp;
 
 struct messageQueue msgstruct;
 
-struct pcb * pct;
+struct pcb * pcbinfo;
 
 
 int main(int argc, char** argv) 
@@ -187,7 +187,7 @@ int main(int argc, char** argv)
                 numChild++;
                 fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", msgstruct.sPid ,
-                        pct[msgstruct.sPid].currentQueue,
+                        pcbinfo[msgstruct.sPid].currentQueue,
                         *clockSec, *clockNS);
                 if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                     perror("OSS: error sending init msg");
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
                     msgstruct.sPid = nextP;
                     fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
-                    pct[nextP].currentQueue, 
+                    pcbinfo[nextP].currentQueue, 
                     *clockSec, *clockNS);
                     if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                         perror("OSS: error sending user msg");
@@ -239,7 +239,7 @@ int main(int argc, char** argv)
         blocked[1] = firstblocked; 
         
 
-        pct[msgstruct.sPid].burstNS = 
+        pcbinfo[msgstruct.sPid].burstNS = 
                 msgstruct.burst;
         
         incClock(msgstruct.sPid);
@@ -266,17 +266,17 @@ int main(int argc, char** argv)
                     "using its entire quantum", msgstruct.sPid,
                     msgstruct.burst);
          
-            if (pct[msgstruct.sPid].currentQueue == 2) {
+            if (pcbinfo[msgstruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 1\n");
                 queueDelete(q2, array, msgstruct.sPid);
                 addProcToQueue(q1, array, msgstruct.sPid);
-                pct[msgstruct.sPid].currentQueue = 1;
+                pcbinfo[msgstruct.sPid].currentQueue = 1;
             }
-            else if (pct[msgstruct.sPid].currentQueue == 3) {
+            else if (pcbinfo[msgstruct.sPid].currentQueue == 3) {
                 fprintf(fp, ", moving to queue 1\n");
                 queueDelete(q3, array, msgstruct.sPid);
                 addProcToQueue(q1, array, msgstruct.sPid);
-                pct[msgstruct.sPid].currentQueue = 1;
+                pcbinfo[msgstruct.sPid].currentQueue = 1;
             }
             else {
                 fprintf(fp, "\n");
@@ -288,18 +288,18 @@ int main(int argc, char** argv)
                     msgstruct.sPid,
                     msgstruct.burst);
             
-            if (pct[msgstruct.sPid].currentQueue == 1) {
+            if (pcbinfo[msgstruct.sPid].currentQueue == 1) {
                 fprintf(fp, ", moving to queue 2\n");
                 queueDelete(q1, array, msgstruct.sPid);
                 addProcToQueue(q2, array, msgstruct.sPid);
-                pct[msgstruct.sPid].currentQueue = 2;
+                pcbinfo[msgstruct.sPid].currentQueue = 2;
             }
          
-            else if (pct[msgstruct.sPid].currentQueue == 2) {
+            else if (pcbinfo[msgstruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 3\n");
                 queueDelete(q2, array, msgstruct.sPid);
                 addProcToQueue(q3, array, msgstruct.sPid);
-                pct[msgstruct.sPid].currentQueue = 3;
+                pcbinfo[msgstruct.sPid].currentQueue = 3;
             }
             else {
                 fprintf(fp, "\n");
@@ -357,7 +357,7 @@ int main(int argc, char** argv)
             msgstruct.sPid = nextP;
             fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
-                    pct[nextP].currentQueue, 
+                    pcbinfo[nextP].currentQueue, 
                     *clockSec, *clockNS);
             if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                 perror("OSS: error sending init msg");
@@ -389,29 +389,29 @@ void block(int blockpid) {
     int temp;
     unsigned int localSec, localNS;
     
-    bWholeSec += pct[blockpid].bWholeSec;
-    bWholeNS += pct[blockpid].bWholeNS;
+    bWholeSec += pcbinfo[blockpid].bWholeSec;
+    bWholeNS += pcbinfo[blockpid].bWholeNS;
     if (bWholeNS >= MAX) {
         bWholeSec++;
         temp = bWholeNS - MAX;
         bWholeNS = temp;
     }
    
-    pct[blockpid].blocked = 1;
-    if (pct[blockpid].currentQueue == 0)
+    pcbinfo[blockpid].blocked = 1;
+    if (pcbinfo[blockpid].currentQueue == 0)
         {queueDelete(q0, array, blockpid);}
-    else if (pct[blockpid].currentQueue == 1)
+    else if (pcbinfo[blockpid].currentQueue == 1)
         {queueDelete(q1, array, blockpid);}
-    else if (pct[blockpid].currentQueue == 2)
+    else if (pcbinfo[blockpid].currentQueue == 2)
         {queueDelete(q2, array, blockpid);}
-    else if (pct[blockpid].currentQueue == 3)
+    else if (pcbinfo[blockpid].currentQueue == 3)
         {queueDelete(q3, array, blockpid);}
 
     addProcToQueue(blocked, array, blockpid);
 
     localSec = *clockSec;
     localNS = *clockNS;
-    temp = roll1000();
+    temp = random();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
     localNS = localNS + temp; 
@@ -439,8 +439,8 @@ void term(int termPid) {
     unsigned int temp;
     waitpid(msgstruct.userPid, &status, 0);
     
-    totalSec += pct[termPid].totalWholeSec;
-    totalNS += pct[termPid].totalWholeNS;
+    totalSec += pcbinfo[termPid].totalWholeSec;
+    totalNS += pcbinfo[termPid].totalWholeNS;
     if (totalNS >= MAX) {
         totalSec++;
         temp = totalNS - MAX;
@@ -449,9 +449,9 @@ void term(int termPid) {
 
     
     totalWaitSec += 
-            (pct[termPid].totalWholeSec - pct[termPid].totalSec);
+            (pcbinfo[termPid].totalWholeSec - pcbinfo[termPid].totalSec);
     totalWaitNS +=
-            (pct[termPid].totalWholeNS - pct[termPid].totalNS);
+            (pcbinfo[termPid].totalWholeNS - pcbinfo[termPid].totalNS);
     if (totalWaitNS >= MAX) {
         totalWaitSec++;
         temp = totalWaitNS - MAX;
@@ -459,24 +459,24 @@ void term(int termPid) {
     }
     
     
-    if (pct[termPid].currentQueue == 0) {
+    if (pcbinfo[termPid].currentQueue == 0) {
         queueDelete(q0, array, termPid);
     }
-    else if (pct[termPid].currentQueue == 1) {
+    else if (pcbinfo[termPid].currentQueue == 1) {
         queueDelete(q1, array, termPid);
     }
-    else if (pct[termPid].currentQueue == 2) {
+    else if (pcbinfo[termPid].currentQueue == 2) {
         queueDelete(q2, array, termPid);
     }
-    else if (pct[termPid].currentQueue == 3) {
+    else if (pcbinfo[termPid].currentQueue == 3) {
         queueDelete(q3, array, termPid);
     }
     bitMap[termPid] = 0;
     numChild--;
-    pct[termPid].totalSec = 0;
-    pct[termPid].totalNS = 0;
-    pct[termPid].totalWholeSec = 0;
-    pct[termPid].totalWholeNS = 0;
+    pcbinfo[termPid].totalSec = 0;
+    pcbinfo[termPid].totalNS = 0;
+    pcbinfo[termPid].totalWholeSec = 0;
+    pcbinfo[termPid].totalWholeNS = 0;
     fprintf(fp,"OSS: User %d has terminated\n",
         msgstruct.sPid);
 }
@@ -485,13 +485,13 @@ void incClock(int childPid) {
     unsigned int localsec = *clockSec;
     unsigned int localns = *clockNS;
     unsigned int temp;
-    temp = roll1000();
+    temp = random();
     if (temp < 100) temp = 100;
     else temp = temp * 10;
     localns = localns + temp; 
     fprintf(fp, "OSS: Time spent this dispatch: %ld nanoseconds\n", temp);
     
-    localns = localns + pct[childPid].burstNS;
+    localns = localns + pcbinfo[childPid].burstNS;
     
     if (localns >= MAX) {
         localsec++;
@@ -523,23 +523,23 @@ void getChild(int wakepid) {
 
     queueDelete(blocked, array, wakepid);
 
-    pct[wakepid].blocked = 0;
-    pct[wakepid].bNS = 0;
-    pct[wakepid].bSec = 0; 
+    pcbinfo[wakepid].blocked = 0;
+    pcbinfo[wakepid].bNS = 0;
+    pcbinfo[wakepid].bSec = 0; 
 
-    if (pct[wakepid].realTimeC == 1) {
+    if (pcbinfo[wakepid].realTimeC == 1) {
         addProcToQueue(q0, array, wakepid);
-        pct[wakepid].currentQueue = 0;
+        pcbinfo[wakepid].currentQueue = 0;
     }
     
     else {
         addProcToQueue(q1, array, wakepid);
-        pct[wakepid].currentQueue = 1;
+        pcbinfo[wakepid].currentQueue = 1;
     }
 
     localsec = *clockSec;
     localns = *clockNS;
-    temp = roll1000();
+    temp = random();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
     localns = localns + temp; 
@@ -593,7 +593,7 @@ void createChild()
 {
     char id[20]; 
     char childSPid[4]; 
-    int sPid, roll;
+    int sPid, rand;
     pid_t childpid;
     nextPbegin(); 
     sPid = getBitSpot();
@@ -611,23 +611,23 @@ void createChild()
     msgstruct.timeFlg = 0;
     msgstruct.sPid = sPid;
 
-    roll = roll1000();
-    if (roll < 45) {
+    rand = random();
+    if (rand < 45) {
         msgstruct.timeGivenNS = cost0;
         PCB(sPid, 1);
         addProcToQueue(q0, array, sPid);
-        pct[sPid].currentQueue = 0;
+        pcbinfo[sPid].currentQueue = 0;
     }
 
     else {
         msgstruct.timeGivenNS = cost1;
         PCB(sPid, 0);
         addProcToQueue(q1, array, sPid);
-        pct[sPid].currentQueue = 1;
+        pcbinfo[sPid].currentQueue = 1;
     }
     fprintf(fp, "OSS: Generating process PID %d and putting it in queue "
             "%d at time %u:%09u, total spawned: %d\n", 
-        pct[sPid].localPid, pct[sPid].currentQueue, 
+        pcbinfo[sPid].localPid, pcbinfo[sPid].currentQueue, 
         *clockSec, *clockNS, numProc);
     fflush(fp);
     if ( (childpid = fork()) < 0 ){ 
@@ -656,9 +656,9 @@ int blockedCheckTwo() {
 
         if (blocked[j] != 0) {
 
-            if ( (localsec > pct[blocked[j]].bSec) || 
-            ( (localsec >= pct[blocked[j]].bSec) && 
-                    (localns >= pct[blocked[j]].bNS) ) ) {
+            if ( (localsec > pcbinfo[blocked[j]].bSec) || 
+            ( (localsec >= pcbinfo[blocked[j]].bSec) && 
+                    (localns >= pcbinfo[blocked[j]].bNS) ) ) {
  
                 getChild(blocked[j]);
                 returnval++;
@@ -703,7 +703,7 @@ int incTime(){
     return 1;
 }
 
-int roll1000() {
+int random() {
     int rvalue;
     rvalue = rand_r(&begin) % (1000 + 1);
     return rvalue;
@@ -725,27 +725,27 @@ void PCB(int pidnum, int realTime)
 {
     unsigned int localSec = *clockSec;
     unsigned int localNS = *clockNS;
-    pct[pidnum].startSec = 0;
-    pct[pidnum].startNS = 0;
-    pct[pidnum].totalSec = 0;
-    pct[pidnum].totalNS = 0;
-    pct[pidnum].totalWholeSec = 0;
-    pct[pidnum].totalWholeNS = 0;
-    pct[pidnum].burstNS = 0;
-    pct[pidnum].blocked = 0;
-    pct[pidnum].bTimes = 0;
-    pct[pidnum].bSec = 0;
-    pct[pidnum].bNS = 0;
-    pct[pidnum].bWholeSec = 0;
-    pct[pidnum].bWholeNS = 0;
-    pct[pidnum].localPid = pidnum; 
-    pct[pidnum].realTimeC = realTime;
+    pcbinfo[pidnum].startSec = 0;
+    pcbinfo[pidnum].startNS = 0;
+    pcbinfo[pidnum].totalSec = 0;
+    pcbinfo[pidnum].totalNS = 0;
+    pcbinfo[pidnum].totalWholeSec = 0;
+    pcbinfo[pidnum].totalWholeNS = 0;
+    pcbinfo[pidnum].burstNS = 0;
+    pcbinfo[pidnum].blocked = 0;
+    pcbinfo[pidnum].bTimes = 0;
+    pcbinfo[pidnum].bSec = 0;
+    pcbinfo[pidnum].bNS = 0;
+    pcbinfo[pidnum].bWholeSec = 0;
+    pcbinfo[pidnum].bWholeNS = 0;
+    pcbinfo[pidnum].localPid = pidnum; 
+    pcbinfo[pidnum].realTimeC = realTime;
 
     if (realTime == 1) {
-        pct[pidnum].currentQueue = 0;
+        pcbinfo[pidnum].currentQueue = 0;
     }
     else {
-        pct[pidnum].currentQueue = 1;
+        pcbinfo[pidnum].currentQueue = 1;
     }
     bitMap[pidnum] = 1;
 }
@@ -773,8 +773,8 @@ void setUp()
             perror("OSS: error in shmget");
             exit(1);
         }
-    pct = (struct pcb *)shmat(shmid, 0, 0);
-    if ( pct == (struct pcb *)(-1) ) {
+    pctinfo = (struct pcb *)shmat(shmid, 0, 0);
+    if ( pcbinfo == (struct pcb *)(-1) ) {
         perror("OSS: error in shmat");
         exit(1);
     }   
