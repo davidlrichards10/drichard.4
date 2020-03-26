@@ -16,34 +16,34 @@
 #define BILLION 1000000000
 
 struct pcb{
-    unsigned int startTime_secs;
-    unsigned int startTime_ns;
-    unsigned int totalCPUtime_secs;
-    unsigned int totalCPUtime_ns;
-    unsigned int totalLIFEtime_secs;
-    unsigned int totalLIFEtime_ns;
-    unsigned int timeUsedLastBurst_ns;
+    unsigned int startSec;
+    unsigned int startNS;
+    unsigned int totalSec;
+    unsigned int totalNS;
+    unsigned int totalWholeSec;
+    unsigned int totalWholeNS;
+    unsigned int burstNS;
     int blocked;
-    int timesBlocked;
-    unsigned int blockedUntilSecs;
-    unsigned int blockedUntilNS;
-    unsigned int totalBlockedTime_secs;
-    unsigned int totalBlockedTime_ns;
-    int localPID;
-    int isRealTimeClass;
+    int bTimes;
+    unsigned int bSec;
+    unsigned int bNS;
+    unsigned int bWholeSec;
+    unsigned int bWholeNS;
+    int localPid;
+    int realTimeC;
     int currentQueue;
 };
 
 
-struct commsbuf {
-    long msgtyp;
+struct messageQueue {
+    long msgTyp;
     int sPid;
-    pid_t user_sys_pid;
-    unsigned int ossTimeSliceGivenNS;
-    int userTerminatingFlag;
-    int userUsedFullTimeSliceFlag;
-    int userBlockedFlag;
-    unsigned int userTimeUsedLastBurst;
+    pid_t userPid;
+    unsigned int timeGivenNS;
+    int termFlg;
+    int timeFlg;
+    int blockedFlg;
+    unsigned int burst;
 };
 
 #endif
