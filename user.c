@@ -183,7 +183,7 @@ void reportFinishedTimeSlice() {
     myinfo.userTerminatingFlag = 0;
     myinfo.userUsedFullTimeSliceFlag = 1;
     myinfo.userTimeUsedLastBurst = myinfo.ossTimeSliceGivenNS;
-    myinfo.user_sim_pid = my_sim_pid;
+    myinfo.sPid = my_sim_pid;
     myinfo.msgtyp = 99;
     if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
         perror("User: error sending msg to oss");
@@ -197,7 +197,7 @@ void reportPreempted() {
     myinfo.userUsedFullTimeSliceFlag = 0;
     myinfo.userTimeUsedLastBurst = randomPortionOfTimeSlice();
     incrementCPUtime();
-    myinfo.user_sim_pid = my_sim_pid;
+    myinfo.sPid = my_sim_pid;
     myinfo.msgtyp = 99;
     if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
         perror("User: error sending msg to oss");
@@ -210,7 +210,7 @@ void reportTermination() {
     myinfo.userBlockedFlag = 0;
     myinfo.userTerminatingFlag = 1;
     myinfo.userUsedFullTimeSliceFlag = 0;
-    myinfo.user_sim_pid = my_sim_pid;
+    myinfo.sPid = my_sim_pid;
     myinfo.msgtyp = 99;
     
     if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {

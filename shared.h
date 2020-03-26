@@ -37,7 +37,7 @@ struct pcb{
 
 struct commsbuf {
     long msgtyp;
-    int user_sim_pid;
+    int sPid;
     pid_t user_sys_pid;
     unsigned int ossTimeSliceGivenNS;
     int userTerminatingFlag;

@@ -378,7 +378,7 @@ int checkTime() {
     unsigned int localSec = *clockSec;
     unsigned int localNS = *clockNS;
     if ( (localSec > createSec) || 
-            ( (localSec >= createSec) && (localns >= createNS) ) ) {
+            ( (localSec >= createSec) && (localNS >= createNS) ) ) {
         rvalue = 1;
     }
  
@@ -414,17 +414,17 @@ void block(int blockpid) {
     temp = roll1000();
     if (temp < 100) temp = 10000;
     else temp = temp * 100;
-    localns = localns + temp; 
+    localNS = localNS + temp; 
     fprintf(fp, "OSS: Time used to move user to blocked queue: %u "
             "nanoseconds\n", temp);
     if (localNS >= BILLION) {
         localSec++;
         temp = localNS - BILLION;
-        localns = temp;
+        localNS = temp;
     }
    
-    *clockSec = localsec;
-    *clockNS = localns;
+    *clockSec = localSec;
+    *clockNS = localNS;
 }
 
 int getChildQ(int q[]) {
