@@ -28,7 +28,7 @@ void queue(int[], int);
 void nextPbegin();
 void PCB(int pidnum, int realTime);
 int getBitSpot();
-int random();
+int randomTime();
 int putQueue();
 void createChild();
 int blockedCheck();
@@ -703,7 +703,7 @@ int incTime(){
     return 1;
 }
 
-int random() {
+int randomTime() {
     int rvalue;
     rvalue = rand_r(&begin) % (1000 + 1);
     return rvalue;
@@ -773,7 +773,7 @@ void setUp()
             perror("OSS: error in shmget");
             exit(1);
         }
-    pctinfo = (struct pcb *)shmat(shmid, 0, 0);
+    pcbinfo = (struct pcb *)shmat(shmid, 0, 0);
     if ( pcbinfo == (struct pcb *)(-1) ) {
         perror("OSS: error in shmat");
         exit(1);

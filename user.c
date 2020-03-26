@@ -124,7 +124,7 @@ void incBlockedTime() {
     unsigned int temp = 0;
     
     pcbinfo[my_sim_pid].bWholeSec += b_sec; 
-    pcbInfo[my_sim_pid].bWholeNS += b_ns;
+    pcbinfo[my_sim_pid].bWholeNS += b_ns;
     if (pcbinfo[my_sim_pid].bWholeNS >= MAX) {
         pcbinfo[my_sim_pid].bWholeSec++;
         temp = pcbinfo[my_sim_pid].bWholeNS - MAX;
