@@ -31,7 +31,7 @@ int my_sim_pid;
 int seed;
 unsigned int b_sec, b_ns;
 
-struct pcb * pct; 
+struct pcb * pcbinfo; 
 
 struct messageQueue mstruct;
 
@@ -41,10 +41,10 @@ int main(int argc, char** argv)
     mstruct.userPid = getpid();
     shmid_pct = atoi(argv[1]);
     my_sim_pid = atoi(argv[2]);
-    int roll;
+    int rand;
 	getSM();
-	pct[my_sim_pid].startSec = *simClock_secs; 
-    pct[my_sim_pid].startNS = *simClock_ns;
+	pcbinfo[my_sim_pid].startSec = *simClock_secs; 
+    pcbinfo[my_sim_pid].startNS = *simClock_ns;
 
 	while(1) {
         if ( msgrcv(oss_qid, &mstruct, sizeof(mstruct), my_sim_pid, 0) == -1 ) {
@@ -53,8 +53,8 @@ int main(int argc, char** argv)
         mstruct.userPid = getpid(); 
         
         
-        roll = randomTime();
-        if (roll < 15) {
+        rand = randomTime();
+        if (rand < 15) {
             
             mstruct.burst = randomSTime();
             incTime();
@@ -63,20 +63,20 @@ int main(int argc, char** argv)
             return 1;
         }
         
-        else if (roll < 17) {
+        else if (rand < 17) {
             
             localsec = *simClock_secs; 
             localns = *simClock_ns;
             b_ns = rand_r(&seed) % 1000 + 1;
             b_sec = rand_r(&seed) % 5 + 1;
-            pct[my_sim_pid].bSec = localsec + b_sec;
-            pct[my_sim_pid].bNS = localns + b_ns;
+            pcbinfo[my_sim_pid].bSec = localsec + b_sec;
+            pcbinfo[my_sim_pid].bNS = localns + b_ns;
             incBlockedTime();
-            pct[my_sim_pid].bTimes++;
+            pcbinfo[my_sim_pid].bTimes++;
             blocked();
         }
         
-        else if (roll < 260) {
+        else if (rand < 260) {
             started();
         }
         else {
@@ -91,9 +91,9 @@ int main(int argc, char** argv)
 void getSM() 
 {
     
-    pct = (struct pcb *)shmat(shmid_pct, 0, 0);
-    if ( pct == (struct pcb *)(-1) ) {
-        perror("User: error in shmat pct");
+    pcbinfo = (struct pcb *)shmat(shmid_pct, 0, 0);
+    if ( pcbinfo == (struct pcb *)(-1) ) {
+        perror("User: error in shmat");
         exit(1);
     }
     
@@ -123,12 +123,12 @@ void incBlockedTime() {
     unsigned int now_ns = *simClock_ns;
     unsigned int temp = 0;
     
-    pct[my_sim_pid].bWholeSec += b_sec; 
-    pct[my_sim_pid].bWholeNS += b_ns;
-    if (pct[my_sim_pid].bWholeNS >= MAX) {
-        pct[my_sim_pid].bWholeSec++;
-        temp = pct[my_sim_pid].bWholeNS - MAX;
-        pct[my_sim_pid].bWholeNS = temp;
+    pcbinfo[my_sim_pid].bWholeSec += b_sec; 
+    pcbInfo[my_sim_pid].bWholeNS += b_ns;
+    if (pcbinfo[my_sim_pid].bWholeNS >= MAX) {
+        pcbinfo[my_sim_pid].bWholeSec++;
+        temp = pcbinfo[my_sim_pid].bWholeNS - MAX;
+        pcbinfo[my_sim_pid].bWholeNS = temp;
     }
             
             
@@ -136,11 +136,11 @@ void incBlockedTime() {
 
 void incTime() {
     unsigned int temp = 0;
-    pct[my_sim_pid].totalNS += mstruct.burst;
-    if (pct[my_sim_pid].totalNS >= MAX) {
-        pct[my_sim_pid].totalSec++;
-        temp = pct[my_sim_pid].totalNS - MAX;
-        pct[my_sim_pid].totalNS = temp;
+    pcbinfo[my_sim_pid].totalNS += mstruct.burst;
+    if (pcbinfo[my_sim_pid].totalNS >= MAX) {
+        pcbinfo[my_sim_pid].totalSec++;
+        temp = pcbinfo[my_sim_pid].totalNS - MAX;
+        pcbinfo[my_sim_pid].totalNS = temp;
     }
 }
 
@@ -150,22 +150,22 @@ void compileStats() {
     unsigned int myEndTimeNS = *simClock_ns;
     unsigned int temp;
 
-    if (myEndTimeSecs == pct[my_sim_pid].startSec) {
-        pct[my_sim_pid].totalWholeNS = 
-                (myEndTimeNS - pct[my_sim_pid].startNS);
-        pct[my_sim_pid].totalWholeSec = 0;
+    if (myEndTimeSecs == pcbinfo[my_sim_pid].startSec) {
+        pcbinfo[my_sim_pid].totalWholeNS = 
+                (myEndTimeNS - pcbinfo[my_sim_pid].startNS);
+        pcbinfo[my_sim_pid].totalWholeSec = 0;
     }
     else {
-        pct[my_sim_pid].totalWholeSec = 
-                myEndTimeSecs - pct[my_sim_pid].startSec;
-        pct[my_sim_pid].totalWholeNS = 
-                myEndTimeNS + (MAX - pct[my_sim_pid].startNS);
-        pct[my_sim_pid].totalWholeSec--;
+        pcbinfo[my_sim_pid].totalWholeSec = 
+                myEndTimeSecs - pcbinfo[my_sim_pid].startSec;
+        pcbinfo[my_sim_pid].totalWholeNS = 
+                myEndTimeNS + (MAX - pcbinfo[my_sim_pid].startNS);
+        pcbinfo[my_sim_pid].totalWholeSec--;
     }
-    if (pct[my_sim_pid].totalWholeNS >= MAX) {
-        pct[my_sim_pid].totalWholeSec++;
-        temp = pct[my_sim_pid].totalWholeNS - MAX;
-        pct[my_sim_pid].totalWholeNS = temp;
+    if (pcbinfo[my_sim_pid].totalWholeNS >= MAX) {
+        pcbinfo[my_sim_pid].totalWholeSec++;
+        temp = pcbinfo[my_sim_pid].totalWholeNS - MAX;
+        pcbinfo[my_sim_pid].totalWholeNS = temp;
     }
     
 }
