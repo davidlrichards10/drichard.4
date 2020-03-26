@@ -79,7 +79,7 @@ unsigned int cost3 = 16000000;
 char outputFileName[] = "log";
 FILE* fp;
 
-struct messageQueue infostruct;
+struct messageQueue msgstruct;
 
 struct pcb * pct;
 
@@ -186,10 +186,10 @@ int main(int argc, char** argv)
                                 
                 numChild++;
                 fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
-                    "time %u:%09u\n", infostruct.sPid ,
-                        pct[infostruct.sPid].currentQueue,
+                    "time %u:%09u\n", msgstruct.sPid ,
+                        pct[msgStruct.sPid].currentQueue,
                         *clockSec, *clockNS);
-                if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+                if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                     perror("OSS: error sending init msg");
                     detach();
                     exit(0);
@@ -200,28 +200,28 @@ int main(int argc, char** argv)
             finishThem = 0;
                 if (nextQ == 0) {
                     nextP = getChildQ(q0);
-                    infostruct.timeGivenNS = cost0;
+                    msgstruct.timeGivenNS = cost0;
                     queueDelete(q0, array, nextP);
                     addProcToQueue(q0, array, nextP);
                 }
                 else if (nextQ == 1) {
                     nextP = getChildQ(q1);
-                    infostruct.timeGivenNS = cost1;
+                    msgstruct.timeGivenNS = cost1;
                     queueDelete(q1, array, nextP);
                     addProcToQueue(q1, array, nextP);
                 }
                 
                 if (nextP != -1) {
-                    infostruct.msgTyp = (long) nextP;
-                    infostruct.termFlg = 0;
-                    infostruct.timeFlg = 0;
-                    infostruct.blockedFlg = 0;
-                    infostruct.sPid = nextP;
+                   msgstruct.msgTyp = (long) nextP;
+                   msgstruct.termFlg = 0;
+                    msgstruct.timeFlg = 0;
+                    msgstruct.blockedFlg = 0;
+                    msgstruct.sPid = nextP;
                     fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
                     pct[nextP].currentQueue, 
                     *clockSec, *clockNS);
-                    if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+                    if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                         perror("OSS: error sending user msg");
                         detach();
                         exit(0);
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 
 	 firstblocked = blocked[1]; 
  
-        if ( msgrcv(qid, &infostruct, sizeof(infostruct), 99, 0) == -1 ) {
+        if ( msgrcv(qid, &msgstruct, sizeof(msgstruct), 99, 0) == -1 ) {
             perror("User: error in msgrcv");
             detach();
             exit(0);
@@ -239,67 +239,67 @@ int main(int argc, char** argv)
         blocked[1] = firstblocked; 
         
 
-        pct[infostruct.sPid].burstNS = 
-                infostruct.burst;
+        pct[msgstruct.sPid].burstNS = 
+                msgstruct.burst;
         
-        incClock(infostruct.sPid);
+        incClock(msgstruct.sPid);
 
-	 if (infostruct.termFlg == 1) {
+	 if (msgstruct.termFlg == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u"
                     " nanoseconds and "
-                    "then terminated\n", infostruct.sPid,
-                    infostruct.burst);
-            term(infostruct.sPid);
+                    "then terminated\n", msgstruct.sPid,
+                    msgstruct.burst);
+            term(msgstruct.sPid);
         }
        
-        else if (infostruct.blockedFlg == 1) {
+        else if (msgstruct.blockedFlg == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds and "
                     "then was blocked by an event. Moving to blocked queue\n", 
-                    infostruct.sPid, infostruct.burst);
-            block(infostruct.sPid);
+                    msgstruct.sPid, msgstruct.burst);
+            block(msgstruct.sPid);
         }
         
-        else if (infostruct.timeFlg == 0) {
+        else if (msgstruct.timeFlg == 0) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds, not "
-                    "using its entire quantum", infostruct.sPid,
-                    infostruct.burst);
+                    "using its entire quantum", msgstruct.sPid,
+                    msgstruct.burst);
          
-            if (pct[infostruct.sPid].currentQueue == 2) {
+            if (pct[msgstruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 1\n");
-                queueDelete(q2, array, infostruct.sPid);
-                addProcToQueue(q1, array, infostruct.sPid);
-                pct[infostruct.sPid].currentQueue = 1;
+                queueDelete(q2, array, msgstruct.sPid);
+                addProcToQueue(q1, array, msgstruct.sPid);
+                pct[msgstruct.sPid].currentQueue = 1;
             }
-            else if (pct[infostruct.sPid].currentQueue == 3) {
+            else if (pct[msgstruct.sPid].currentQueue == 3) {
                 fprintf(fp, ", moving to queue 1\n");
-                queueDelete(q3, array, infostruct.sPid);
-                addProcToQueue(q1, array, infostruct.sPid);
-                pct[infostruct.sPid].currentQueue = 1;
+                queueDelete(q3, array, msgstruct.sPid);
+                addProcToQueue(q1, array, msgstruct.sPid);
+                pct[msgstruct.sPid].currentQueue = 1;
             }
             else {
                 fprintf(fp, "\n");
             }
         }
-	  else if (infostruct.timeFlg == 1) {
+	  else if (msgstruct.timeFlg == 1) {
             fprintf(fp, "OSS: Receiving that process PID %d ran for %u "
                     "nanoseconds", 
-                    infostruct.sPid,
-                    infostruct.burst);
+                    msgstruct.sPid,
+                    msgstruct.burst);
             
-            if (pct[infostruct.sPid].currentQueue == 1) {
+            if (pct[msgstruct.sPid].currentQueue == 1) {
                 fprintf(fp, ", moving to queue 2\n");
-                queueDelete(q1, array, infostruct.sPid);
-                addProcToQueue(q2, array, infostruct.sPid);
-                pct[infostruct.sPid].currentQueue = 2;
+                queueDelete(q1, array, msgstruct.sPid);
+                addProcToQueue(q2, array, msgstruct.sPid);
+                pct[msgstruct.sPid].currentQueue = 2;
             }
          
-            else if (pct[infostruct.sPid].currentQueue == 2) {
+            else if (pct[msgstruct.sPid].currentQueue == 2) {
                 fprintf(fp, ", moving to queue 3\n");
-                queueDelete(q2, array, infostruct.sPid);
-                addProcToQueue(q3, array, infostruct.sPid);
-                pct[infostruct.sPid].currentQueue = 3;
+                queueDelete(q2, array, msgstruct.sPid);
+                addProcToQueue(q3, array, msgstruct.sPid);
+                pct[msgstruct.sPid].currentQueue = 3;
             }
             else {
                 fprintf(fp, "\n");
@@ -322,25 +322,25 @@ int main(int argc, char** argv)
 	      nextQ = putQueue();
         if (nextQ == 0) {
             nextP = getChildQ(q0);
-            infostruct.timeGivenNS = cost0;
+            msgstruct.timeGivenNS = cost0;
             queueDelete(q0, array, nextP);
             addProcToQueue(q0, array, nextP);
         }
         else if (nextQ == 1) {
             nextP = getChildQ(q1);
-            infostruct.timeGivenNS = cost1;
+            msgstruct.timeGivenNS = cost1;
             queueDelete(q1, array, nextP);
             addProcToQueue(q1, array, nextP);
         }
         else if (nextQ == 2) {
             nextP = getChildQ(q2);
-            infostruct.timeGivenNS = cost2;
+            msgstruct.timeGivenNS = cost2;
             queueDelete(q2, array, nextP);
             addProcToQueue(q2, array, nextP);
         }
         else if (nextQ == 3) {
             nextP = getChildQ(q3);
-            infostruct.timeGivenNS = cost3;
+            msgstruct.timeGivenNS = cost3;
             queueDelete(q3, array, nextP);
             addProcToQueue(q3, array, nextP);
         }
@@ -350,16 +350,16 @@ int main(int argc, char** argv)
         }
 
 	if (nextP != -1) {
-            infostruct.msgTyp = (long) nextP;
-            infostruct.termFlg = 0;
-            infostruct.timeFlg = 0;
-            infostruct.blockedFlg = 0;
-            infostruct.sPid = nextP;
+            msgstruct.msgTyp = (long) nextP;
+            msgstruct.termFlg = 0;
+            msgstruct.timeFlg = 0;
+            msgstruct.blockedFlg = 0;
+            msgstruct.sPid = nextP;
             fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", nextP, 
                     pct[nextP].currentQueue, 
                     *clockSec, *clockNS);
-            if ( msgsnd(qid, &infostruct, sizeof(infostruct), 0) == -1 ) {
+            if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                 perror("OSS: error sending init msg");
                 detach();
                 exit(0);
@@ -437,7 +437,7 @@ int getChildQ(int q[]) {
 void term(int termPid) {
     int status;
     unsigned int temp;
-    waitpid(infostruct.userPid, &status, 0);
+    waitpid(msgstruct.userPid, &status, 0);
     
     totalSec += pct[termPid].totalWholeSec;
     totalNS += pct[termPid].totalWholeNS;
@@ -478,7 +478,7 @@ void term(int termPid) {
     pct[termPid].totalWholeSec = 0;
     pct[termPid].totalWholeNS = 0;
     fprintf(fp,"OSS: User %d has terminated\n",
-        infostruct.sPid);
+        msgstruct.sPid);
 }
 
 void incClock(int childPid) {
@@ -606,21 +606,21 @@ void createChild()
     if (numProc >= 10) {
         newChild = 0;
     }
-    infostruct.msgTyp = sPid;
-    infostruct.termFlg = 0;
-    infostruct.timeFlg = 0;
-    infostruct.sPid = sPid;
+    msgstruct.msgTyp = sPid;
+    msgstruct.termFlg = 0;
+    msgstruct.timeFlg = 0;
+    msgstruct.sPid = sPid;
 
     roll = roll1000();
     if (roll < 45) {
-        infostruct.timeGivenNS = cost0;
+        msgstruct.timeGivenNS = cost0;
         PCB(sPid, 1);
         addProcToQueue(q0, array, sPid);
         pct[sPid].currentQueue = 0;
     }
 
     else {
-        infostruct.timeGivenNS = cost1;
+        msgstruct.timeGivenNS = cost1;
         PCB(sPid, 0);
         addProcToQueue(q1, array, sPid);
         pct[sPid].currentQueue = 1;
