@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         roll = roll1000();
         if (roll < 15) {
             
-            mystruct.burst = randomPortionOfTimeSlice();
+            mstruct.burst = randomPortionOfTimeSlice();
             incrementCPUtime();
             compileStats();
             reportTermination();

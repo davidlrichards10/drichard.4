@@ -187,7 +187,7 @@ int main(int argc, char** argv)
                 numChild++;
                 fprintf(fp, "OSS: Dispatching process PID %d from queue %d at "
                     "time %u:%09u\n", msgstruct.sPid ,
-                        pct[msgStruct.sPid].currentQueue,
+                        pct[msgstruct.sPid].currentQueue,
                         *clockSec, *clockNS);
                 if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) {
                     perror("OSS: error sending init msg");
