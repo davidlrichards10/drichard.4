@@ -39,30 +39,30 @@ unsigned int b_sec, b_ns;
 
 struct pcb * pct; 
 
-struct commsbuf myinfo;
+struct messageQueue mstruct;
 
 int main(int argc, char** argv) 
 {
 	 unsigned int localsec, localns;
-    myinfo.user_sys_pid = getpid();
+    mstruct.userPid = getpid();
     shmid_pct = atoi(argv[1]);
     my_sim_pid = atoi(argv[2]);
     int roll;
 	getSM();
-	pct[my_sim_pid].startTime_secs = *simClock_secs; 
-    pct[my_sim_pid].startTime_ns = *simClock_ns;
+	pct[my_sim_pid].startSec = *simClock_secs; 
+    pct[my_sim_pid].startNS = *simClock_ns;
 
 	while(1) {
-        if ( msgrcv(oss_qid, &myinfo, sizeof(myinfo), my_sim_pid, 0) == -1 ) {
+        if ( msgrcv(oss_qid, &mstruct, sizeof(mstruct), my_sim_pid, 0) == -1 ) {
             exit(0);
         }
-        myinfo.user_sys_pid = getpid(); 
+        mstruct.userPid = getpid(); 
         
         
         roll = roll1000();
         if (roll < 15) {
             
-            myinfo.userTimeUsedLastBurst = randomPortionOfTimeSlice();
+            mystruct.burst = randomPortionOfTimeSlice();
             incrementCPUtime();
             compileStats();
             reportTermination();
@@ -75,10 +75,10 @@ int main(int argc, char** argv)
             localns = *simClock_ns;
             b_ns = rand_r(&seed) % 1000 + 1;
             b_sec = rand_r(&seed) % 5 + 1;
-            pct[my_sim_pid].blockedUntilSecs = localsec + b_sec;
-            pct[my_sim_pid].blockedUntilNS = localns + b_ns;
+            pct[my_sim_pid].bSec = localsec + b_sec;
+            pct[my_sim_pid].bNS = localns + b_ns;
             incrementBlockedTime();
-            pct[my_sim_pid].timesBlocked++;
+            pct[my_sim_pid].bTimes++;
             reportBlocked();
         }
         
@@ -129,12 +129,12 @@ void incrementBlockedTime() {
     unsigned int now_ns = *simClock_ns;
     unsigned int temp = 0;
     
-    pct[my_sim_pid].totalBlockedTime_secs += b_sec; 
-    pct[my_sim_pid].totalBlockedTime_ns += b_ns;
-    if (pct[my_sim_pid].totalBlockedTime_ns >= BILLION) {
-        pct[my_sim_pid].totalBlockedTime_secs++;
-        temp = pct[my_sim_pid].totalBlockedTime_ns - BILLION;
-        pct[my_sim_pid].totalBlockedTime_ns = temp;
+    pct[my_sim_pid].bWholeSec += b_sec; 
+    pct[my_sim_pid].bWholeNS += b_ns;
+    if (pct[my_sim_pid].bWholeNS >= MAX) {
+        pct[my_sim_pid].bWholeSec++;
+        temp = pct[my_sim_pid].bWholeNS - MAX;
+        pct[my_sim_pid].bWholeNS = temp;
     }
             
             
@@ -142,11 +142,11 @@ void incrementBlockedTime() {
 
 void incrementCPUtime() {
     unsigned int temp = 0;
-    pct[my_sim_pid].totalCPUtime_ns += myinfo.userTimeUsedLastBurst;
-    if (pct[my_sim_pid].totalCPUtime_ns >= BILLION) {
-        pct[my_sim_pid].totalCPUtime_secs++;
-        temp = pct[my_sim_pid].totalCPUtime_ns - BILLION;
-        pct[my_sim_pid].totalCPUtime_ns = temp;
+    pct[my_sim_pid].totalNS += mstruct.burst;
+    if (pct[my_sim_pid].totalNS >= MAX) {
+        pct[my_sim_pid].totalSec++;
+        temp = pct[my_sim_pid].totalNS - MAX;
+        pct[my_sim_pid].totalNS = temp;
     }
 }
 
@@ -156,22 +156,22 @@ void compileStats() {
     unsigned int myEndTimeNS = *simClock_ns;
     unsigned int temp;
 
-    if (myEndTimeSecs == pct[my_sim_pid].startTime_secs) {
-        pct[my_sim_pid].totalLIFEtime_ns = 
-                (myEndTimeNS - pct[my_sim_pid].startTime_ns);
-        pct[my_sim_pid].totalLIFEtime_secs = 0;
+    if (myEndTimeSecs == pct[my_sim_pid].startSec) {
+        pct[my_sim_pid].totalWholeNS = 
+                (myEndTimeNS - pct[my_sim_pid].startNS);
+        pct[my_sim_pid].totalWholeSec = 0;
     }
     else {
-        pct[my_sim_pid].totalLIFEtime_secs = 
-                myEndTimeSecs - pct[my_sim_pid].startTime_secs;
-        pct[my_sim_pid].totalLIFEtime_ns = 
-                myEndTimeNS + (BILLION - pct[my_sim_pid].startTime_ns);
-        pct[my_sim_pid].totalLIFEtime_secs--;
+        pct[my_sim_pid].totalWholeSec = 
+                myEndTimeSecs - pct[my_sim_pid].startSec;
+        pct[my_sim_pid].totalWholeNS = 
+                myEndTimeNS + (MAX - pct[my_sim_pid].startNS);
+        pct[my_sim_pid].totalWholeSec--;
     }
-    if (pct[my_sim_pid].totalLIFEtime_ns >= BILLION) {
-        pct[my_sim_pid].totalLIFEtime_secs++;
-        temp = pct[my_sim_pid].totalLIFEtime_ns - BILLION;
-        pct[my_sim_pid].totalLIFEtime_ns = temp;
+    if (pct[my_sim_pid].totalWholeNS >= MAX) {
+        pct[my_sim_pid].totalWholeSec++;
+        temp = pct[my_sim_pid].totalWholeNS - MAX;
+        pct[my_sim_pid].totalWholeNS = temp;
     }
     
 }
@@ -179,27 +179,27 @@ void compileStats() {
 
 void reportFinishedTimeSlice() {
     incrementCPUtime();
-    myinfo.userBlockedFlag = 0;
-    myinfo.userTerminatingFlag = 0;
-    myinfo.userUsedFullTimeSliceFlag = 1;
-    myinfo.userTimeUsedLastBurst = myinfo.ossTimeSliceGivenNS;
-    myinfo.sPid = my_sim_pid;
-    myinfo.msgtyp = 99;
-    if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
+    mstruct.blockedFlg = 0;
+    mstruct.termFlg = 0;
+    mstruct.timeFlg = 1;
+    mstruct.burst = mstruct.timeGivenNS;
+    mstruct.sPid = my_sim_pid;
+    mstruct.msgTyp = 99;
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
 }
 
 void reportPreempted() {
-    myinfo.userBlockedFlag = 0;
-    myinfo.userTerminatingFlag = 0;
-    myinfo.userUsedFullTimeSliceFlag = 0;
-    myinfo.userTimeUsedLastBurst = randomPortionOfTimeSlice();
+    mstruct.blockedFlg = 0;
+    mstruct.termFlg = 0;
+    mstruct.timeFlg = 0;
+    mstruct.burst = randomPortionOfTimeSlice();
     incrementCPUtime();
-    myinfo.sPid = my_sim_pid;
-    myinfo.msgtyp = 99;
-    if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
+    mstruct.sPid = my_sim_pid;
+    mstruct.msgTyp = 99;
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
@@ -207,13 +207,13 @@ void reportPreempted() {
 
 
 void reportTermination() {
-    myinfo.userBlockedFlag = 0;
-    myinfo.userTerminatingFlag = 1;
-    myinfo.userUsedFullTimeSliceFlag = 0;
-    myinfo.sPid = my_sim_pid;
-    myinfo.msgtyp = 99;
+    mstruct.blockedFlg = 0;
+    mstruct.termFlg = 1;
+    mstruct.timeFlg = 0;
+    mstruct.sPid = my_sim_pid;
+    mstruct.msgTyp = 99;
     
-    if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
@@ -221,17 +221,17 @@ void reportTermination() {
 
 unsigned int randomPortionOfTimeSlice() {
     unsigned int return_val;
-    return_val = (rand_r(&seed) % (myinfo.ossTimeSliceGivenNS) + 1);
+    return_val = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
     return return_val;
 }
 
 void reportBlocked() {
-    myinfo.msgtyp = 99;
-    myinfo.userUsedFullTimeSliceFlag = 0;
-    myinfo.userTimeUsedLastBurst = rand_r(&seed) % 99 + 1;
+    mstruct.msgTyp = 99;
+    mstruct.timeFlg = 0;
+    mstruct.burst = rand_r(&seed) % 99 + 1;
     incrementCPUtime();
-    myinfo.userBlockedFlag = 1;
-    if ( msgsnd(oss_qid, &myinfo, sizeof(myinfo), 0) == -1 ) {
+    mstruct.blockedFlg = 1;
+    if ( msgsnd(oss_qid, &mstruct, sizeof(mstruct), 0) == -1 ) {
         perror("User: error sending msg to oss");
         exit(0);
     }
