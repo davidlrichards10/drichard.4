@@ -126,11 +126,11 @@ int main(int argc, char** argv)
 	setUp();
 	
 	bitMapF(array);
-    	queue(q0, array);
-    	queue(q1, array);
-    	queue(q2, array);
-    	queue(q3, array);
-    	queue(blocked, array);
+    	createQueue(q0, array);
+    	createQueue(q1, array);
+    	createQueue(q2, array);
+    	createQueue(q3, array);
+    	createQueue(blocked, array);
     
    	nextPbegin();
 	
@@ -199,15 +199,15 @@ int main(int argc, char** argv)
 		{
                 	nextP = getChildQ(q0);
                 	msgstruct.timeGivenNS = cost0;
-                	queueDelete(q0, array, nextP);
-                	addProcToQueue(q0, array, nextP);
+                	deleteFromQueue(q0, array, nextP);
+                	addToQueue(q0, array, nextP);
                 }
                 else if (nextQ == 1) 
 		{
                 	nextP = getChildQ(q1);
                     	msgstruct.timeGivenNS = cost1;
-                    	queueDelete(q1, array, nextP);
-                    	addProcToQueue(q1, array, nextP);
+                    	deleteFromQueue(q1, array, nextP);
+                    	addToQueue(q1, array, nextP);
                 }
                 
                 if (nextP != -1) 
@@ -262,16 +262,16 @@ int main(int argc, char** argv)
 		{
                 	fprintf(fp, ", moving to queue 1\n");
                 	lines++;
-			queueDelete(q2, array, msgstruct.sPid);
-                	addProcToQueue(q1, array, msgstruct.sPid);
+			deleteFromQueue(q2, array, msgstruct.sPid);
+                	addToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
             	else if (pcbinfo[msgstruct.sPid].currentQueue == 3) 
 		{
                 	fprintf(fp, ", moving to queue 1\n");
                 	lines++;
-			queueDelete(q3, array, msgstruct.sPid);
-                	addProcToQueue(q1, array, msgstruct.sPid);
+			deleteFromQueue(q3, array, msgstruct.sPid);
+                	addToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
             	else 
@@ -287,8 +287,8 @@ int main(int argc, char** argv)
 		{
                 	fprintf(fp, ", moving to queue 2\n");
                 	lines++;
-			queueDelete(q1, array, msgstruct.sPid);
-                	addProcToQueue(q2, array, msgstruct.sPid);
+			deleteFromQueue(q1, array, msgstruct.sPid);
+                	addToQueue(q2, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 2;
             	}
          
@@ -296,8 +296,8 @@ int main(int argc, char** argv)
 		{
                 	fprintf(fp, ", moving to queue 3\n");
                 	lines++;
-			queueDelete(q2, array, msgstruct.sPid);
-                	addProcToQueue(q3, array, msgstruct.sPid);
+			deleteFromQueue(q2, array, msgstruct.sPid);
+                	addToQueue(q3, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 3;
             	}
             	else 
@@ -328,29 +328,29 @@ int main(int argc, char** argv)
 	{
         	nextP = getChildQ(q0);
             	msgstruct.timeGivenNS = cost0;
-            	queueDelete(q0, array, nextP);
-            	addProcToQueue(q0, array, nextP);
+            	deleteFromQueue(q0, array, nextP);
+            	addToQueue(q0, array, nextP);
         }
         else if (nextQ == 1) 
 	{
             	nextP = getChildQ(q1);
             	msgstruct.timeGivenNS = cost1;
-            	queueDelete(q1, array, nextP);
-            	addProcToQueue(q1, array, nextP);
+            	deleteFromQueue(q1, array, nextP);
+            	addToQueue(q1, array, nextP);
         }
         else if (nextQ == 2) 
 	{
             	nextP = getChildQ(q2);
             	msgstruct.timeGivenNS = cost2;
-            	queueDelete(q2, array, nextP);
-            	addProcToQueue(q2, array, nextP);
+            	deleteFromQueue(q2, array, nextP);
+            	addToQueue(q2, array, nextP);
         }
         else if (nextQ == 3) 
 	{
             	nextP = getChildQ(q3);
             	msgstruct.timeGivenNS = cost3;
-            	queueDelete(q3, array, nextP);
-            	addProcToQueue(q3, array, nextP);
+            	deleteFromQueue(q3, array, nextP);
+            	addToQueue(q3, array, nextP);
         }
    
         else 
@@ -415,15 +415,15 @@ void block(int blockpid)
    
     	pcbinfo[blockpid].blocked = 1;
     	if (pcbinfo[blockpid].currentQueue == 0)
-        {queueDelete(q0, array, blockpid);}
+        {deleteFromQueue(q0, array, blockpid);}
     	else if (pcbinfo[blockpid].currentQueue == 1)
-        {queueDelete(q1, array, blockpid);}
+        {deleteFromQueue(q1, array, blockpid);}
     	else if (pcbinfo[blockpid].currentQueue == 2)
-        {queueDelete(q2, array, blockpid);}
+        {deleteFromQueue(q2, array, blockpid);}
     	else if (pcbinfo[blockpid].currentQueue == 3)
-        {queueDelete(q3, array, blockpid);}
+        {deleteFromQueue(q3, array, blockpid);}
 
-    	addProcToQueue(blocked, array, blockpid);
+    	addToQueue(blocked, array, blockpid);
 
     	localSec = *clockSec;
     	localNS = *clockNS;
@@ -478,19 +478,19 @@ void term(int termPid)
     
     	if (pcbinfo[termPid].currentQueue == 0) 
 	{
-        	queueDelete(q0, array, termPid);
+        	deleteFromQueue(q0, array, termPid);
     	}
     	else if (pcbinfo[termPid].currentQueue == 1) 
 	{
-        	queueDelete(q1, array, termPid);
+        	deleteFromQueue(q1, array, termPid);
     	}
     	else if (pcbinfo[termPid].currentQueue == 2) 
 	{
-        	queueDelete(q2, array, termPid);
+        	deleteFromQueue(q2, array, termPid);
     	}
     	else if (pcbinfo[termPid].currentQueue == 3) 
 	{
-        	queueDelete(q3, array, termPid);
+        	deleteFromQueue(q3, array, termPid);
     	}
     	bitMap[termPid] = 0;
     	numChild--;
@@ -530,7 +530,7 @@ void getChild(int wakepid)
 {
     	unsigned int localsec, localns, temp;
 
-    	queueDelete(blocked, array, wakepid);
+    	deleteFromQueue(blocked, array, wakepid);
 
     	pcbinfo[wakepid].blocked = 0;
     	pcbinfo[wakepid].bNS = 0;
@@ -538,13 +538,13 @@ void getChild(int wakepid)
 
     	if (pcbinfo[wakepid].realTimeC == 1) 
 	{
-        	addProcToQueue(q0, array, wakepid);
+        	addToQueue(q0, array, wakepid);
         	pcbinfo[wakepid].currentQueue = 0;
     	}
     
     	else 
 	{
-        	addProcToQueue(q1, array, wakepid);
+        	addToQueue(q1, array, wakepid);
         	pcbinfo[wakepid].currentQueue = 1;
     	}
 
@@ -602,7 +602,7 @@ void createChild()
 	{
         	msgstruct.timeGivenNS = cost0;
         	PCB(sPid, 1);
-        	addProcToQueue(q0, array, sPid);
+        	addToQueue(q0, array, sPid);
         	pcbinfo[sPid].currentQueue = 0;
     	}
 
@@ -610,7 +610,7 @@ void createChild()
 	{
         	msgstruct.timeGivenNS = cost1;
         	PCB(sPid, 0);
-        	addProcToQueue(q1, array, sPid);
+        	addToQueue(q1, array, sPid);
         	pcbinfo[sPid].currentQueue = 1;
     	}
     	fprintf(fp, "OSS: Generating process PID %d and putting it in queue %d at time %u:%09u\n", pcbinfo[sPid].localPid, pcbinfo[sPid].currentQueue, *clockSec, *clockNS);
