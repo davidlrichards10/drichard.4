@@ -1,0 +1,167 @@
+commit 98ef5499bcf617a094b08f039d1f9558a5c49032
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 19:36:58 2020 -0500
+
+    fixed queue timing issue
+
+commit b09d36b40a01fdda206396c520ae94a1a3f11feb
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 11:20:56 2020 -0500
+
+    working on final stats
+
+commit cac8b57d81d938bbdcbaaea0dce91f3cf4bdd86f
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 11:18:16 2020 -0500
+
+    Update user.c
+
+commit 54cc0fbd3206d82063dabad5f30342ad90519f71
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 11:14:32 2020 -0500
+
+    Update oss.c
+
+commit a310301eeb867d0384ae9f9dacc46b760394ea57
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 11:06:49 2020 -0500
+
+    figure out termination or blocked
+
+commit f2ee4897c9bfa94dd51f3fa43a379543a602f0ab
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 11:02:49 2020 -0500
+
+    Update user.c
+
+commit ca6a49422c9b1905825c9a03dba6d23ecb27c895
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 10:53:33 2020 -0500
+
+    Update user.c
+
+commit c761aad057a6176eb500e7563087ff34cc8182ce
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 10:47:21 2020 -0500
+
+    fixed bug
+
+commit 2976ca7d9710145427797c4bc0aea244776ff905
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 10:37:07 2020 -0500
+
+    Update user.c
+
+commit 64f10fd1de4ed99695ed5ff21e6fa54faef7cde8
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 10:18:55 2020 -0500
+
+    logging stats
+
+commit db22f6c7c87b52ab380fcdd008e392729f237c87
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 10:16:20 2020 -0500
+
+    Update oss.c
+
+commit cfc2f0b59af4ec4ea160cb3aa523d5a9f0d1b860
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 10:09:33 2020 -0500
+
+    Update user.c
+
+commit 8b20906cead200b75c293f070110bd1e03bc5223
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 09:54:08 2020 -0500
+
+    Update oss.c
+
+commit 7a772b1460bbb9bd28bed1808aa866e84942399e
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 09:37:42 2020 -0500
+
+    Update shared.h
+
+commit cb33b3b34ec143ae86de1723584bff77e9fa18d9
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 09:37:12 2020 -0500
+
+    Update shared.h
+
+commit 7e05088db26bf1679038147eff0aa87e01943cbb
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Thu Mar 26 09:32:17 2020 -0500
+
+    created multilevel and blocked queue
+
+commit 1e0095f192ecbd790352140704096f1ac07b27d4
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Thu Mar 26 09:27:04 2020 -0500
+
+    Update oss.c
+
+commit be76f340085ac230bd556c4a78860a2d0d5ab999
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Wed Mar 25 10:26:34 2020 -0500
+
+    tracking statistics and fixed message queue
+
+commit 7aeaa49d03b6bf4b4f95db22c885ea570fee806c
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Wed Mar 25 10:20:47 2020 -0500
+
+    Delete logs
+
+commit 657ab2d5bd29e6e0c8cc7195a8235c0c1897c189
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Wed Mar 25 10:19:35 2020 -0500
+
+    Update oss.c
+
+commit 2bc55f92e9ca87e6b77dd9b1a680910f378118be
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Tue Mar 24 15:10:48 2020 -0500
+
+    created round robin queue for process scheduling
+
+commit fe6ed5d940ba03dbc7ef97624eaaf55340b65340
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Tue Mar 24 14:32:06 2020 -0500
+
+    created PC table with one process
+
+commit 5b5546f808ea623c844a8fe63a125fd6b58d8bad
+Author: David Richards <drichard@hoare7.cs.umsl.edu>
+Date:   Tue Mar 24 08:22:26 2020 -0500
+
+    setup shared memory and message queue
+
+commit f50620af9baa322c42b639f19d5e81658a2bfa65
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Tue Mar 24 07:57:09 2020 -0500
+
+    Create makefile
+
+commit 0b37ff0f0d19a36f756081d3fdbc606961153758
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Tue Mar 24 07:56:40 2020 -0500
+
+    Create README
+
+commit 722a6e8c6d627050d536f9c28c4765d8b20d2238
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Tue Mar 24 07:56:27 2020 -0500
+
+    Create user.c
+
+commit 4409879c5e11528fabd89f4dda076f9955d8b95c
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Tue Mar 24 07:56:03 2020 -0500
+
+    Create shared.h
+
+commit 44d99a8edc9bbff99338f9c897efd27a4ef7836c
+Author: davidlrichards10 <62032455+davidlrichards10@users.noreply.github.com>
+Date:   Tue Mar 24 07:55:33 2020 -0500
+
+    Create oss.c
