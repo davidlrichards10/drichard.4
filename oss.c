@@ -19,23 +19,24 @@
 #include <string.h>
 #include <time.h>
 #include "shared.h"
+#include "queue.h"
 
 void setUp(); //allocate shared memory
 void detach(); //clear shared memory and message queues
 void sigErrors(int signum);
 void bitMapF(int n);
-void queue(int[], int);
+//void queue(int[], int);
 void nextPbegin();
 void PCB(int pidnum, int realTime);
-int getBitSpot();
+//int getBitSpot();
 int randomTime();
-int putQueue();
+//int putQueue();
 void createChild();
 int blockedCheck();
 int blockedCheckTwo();
 int incTime();
 void getChild(int);
-int queueDelete(int[], int, int);
+//int queueDelete(int[], int, int);
 void incClock(int);
 void term(int);
 void block(int);
@@ -519,25 +520,6 @@ void incClock(int childPid)
     	*clockNS = localns;
 }
 
-int queueDelete(int q[], int arrsize, int pNum) 
-{
-    	int i;
-    	for (i=1; i<arrsize; i++) 
-	{
-        	if (q[i] == pNum) 
-		{ 
-            		while(i+1 < arrsize) 
-			{ 
-                		q[i] = q[i+1];
-                		i++;
-            		}
-            		q[18] = 0; 
-            		return 1;
-        	}
-    	}
-    	return -1;
-}
-
 void getChild(int wakepid) 
 {
     	unsigned int localsec, localns, temp;
@@ -566,41 +548,6 @@ void getChild(int wakepid)
     	if (temp < 100) temp = 10000;
     	else temp = temp * 100;
     	localns = localns + temp; 
-}
-
-int putQueue() 
-{
-    	if (q0[1] != 0) 
-	{
-        	return 0;
-    	}
-    	else if (q1[1] != 0) 
-	{
-        	return 1;
-    	}
-    	else if (q2[1] != 0) 
-	{
-        	return 2;
-    	}
-    	else if (q3[1] != 0) 
-	{
-        	return 3;
-    	}
-    	else return -1;
-}
-
-int addProcToQueue (int q[], int arrsize, int pNum) 
-{
-    	int i;
-    	for (i=1; i<arrsize; i++) 
-	{
-        	if (q[i] == 0) 
-		{ 
-            		q[i] = pNum;
-            		return 1;
-        	}
-    	}
-    	return -1; 
 }
 
 void nextPbegin()
@@ -752,21 +699,6 @@ int randomTime()
     	return rvalue;
 }
 
-int getBitSpot() 
-{
-    	int i;
-    	int rvalue = -1;
-    	for (i=1; i<19; i++) 
-	{
-        	if (bitMap[i] == 0) 
-		{
-            		rvalue = i;
-            		break;
-        	}
-    	}
-    	return rvalue;
-}
-
 void PCB(int pidnum, int realTime) 
 {
     	unsigned int localSec = *clockSec;
@@ -796,24 +728,6 @@ void PCB(int pidnum, int realTime)
         	pcbinfo[pidnum].currentQueue = 1;
     	}
     	bitMap[pidnum] = 1;
-}
-
-void queue(int q[], int size) 
-{
-    	int i;
-    	for(i=0; i<size; i++) 
-	{
-        	q[i] = 0;
-    	}
-}
-
-void bitMapF(int n) 
-{
-    	int i;
-    	for (i=0; i<n; i++) 
-	{
-        	bitMap[i] = 0;
-    	}
 }
 
 void setUp() 
