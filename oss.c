@@ -25,18 +25,14 @@ void setUp(); //allocate shared memory
 void detach(); //clear shared memory and message queues
 void sigErrors(int signum);
 void bitMapF(int n);
-//void queue(int[], int);
 void nextPbegin();
 void PCB(int pidnum, int realTime);
-//int getBitSpot();
 int randomTime();
-//int putQueue();
 void createChild();
 int blockedCheck();
 int blockedCheckTwo();
 int incTime();
 void getChild(int);
-//int queueDelete(int[], int, int);
 void incClock(int);
 void term(int);
 void block(int);
@@ -57,7 +53,6 @@ unsigned int nextProcNS, nextProcSec, begin;
 unsigned int createNS, createSec;
 static unsigned int *clockSec; //pointer to shm sim clock (seconds)
 static unsigned int *clockNS; //pointer to shm sim clock (nanoseconds)
-int bitMap[19];
 int blocked[19];
 int numProc = 0;
 int newChild = 1;
@@ -66,11 +61,6 @@ int numUnblocked;
 pid_t pids[20];
 int lines = 0;
 int nextP, nextQ;
-
-int q0[19]; 
-int q1[19]; 
-int q2[19]; 
-int q3[19]; 
 
 unsigned int cost0 = 2000000;
 unsigned int cost1 = 4000000; 
@@ -148,14 +138,14 @@ int main(int argc, char** argv)
 	
 	while (1) 
 	{
-		if (realTimeGone < fullTime) 
+		/*if (realTimeGone < fullTime) 
 		{
             		realTimeGone = (double)(time(NULL) - start);
             		if (realTimeGone >= fullTime) 
 			{
                 		newChild = 0;
             		}
-        	}
+        	}*/
        
         if (newChild == 0 && numChild == 0) 
 	{
@@ -193,6 +183,7 @@ int main(int argc, char** argv)
                 	createChild();         
                 	numChild++;
                 	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", msgstruct.sPid ,pcbinfo[msgstruct.sPid].currentQueue,*clockSec, *clockNS);
+			lines++;
 			if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
 			{
                     		perror("OSS: error sending init msg");
@@ -227,6 +218,7 @@ int main(int argc, char** argv)
                     	msgstruct.blockedFlg = 0;
                     	msgstruct.sPid = nextP;
                     	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", nextP, pcbinfo[nextP].currentQueue, *clockSec, *clockNS);
+			lines++;
 			if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
 			{
                         	perror("OSS: error sending user msg");
@@ -251,13 +243,15 @@ int main(int argc, char** argv)
 	if (msgstruct.termFlg == 1) 
 	{
 		fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds and then terminated\n", msgstruct.sPid,msgstruct.burst);
-            	term(msgstruct.sPid);
+            	lines++;
+		term(msgstruct.sPid);
         }
        
         else if (msgstruct.blockedFlg == 1) 
 	{	
         	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds and then was blocked by an event. Moving to blocked queue\n", msgstruct.sPid, msgstruct.burst);
-            	block(msgstruct.sPid);
+            	lines++;
+		block(msgstruct.sPid);
         }
  
         else if (msgstruct.timeFlg == 0) 
@@ -267,14 +261,16 @@ int main(int argc, char** argv)
         	if (pcbinfo[msgstruct.sPid].currentQueue == 2) 
 		{
                 	fprintf(fp, ", moving to queue 1\n");
-                	queueDelete(q2, array, msgstruct.sPid);
+                	lines++;
+			queueDelete(q2, array, msgstruct.sPid);
                 	addProcToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
             	else if (pcbinfo[msgstruct.sPid].currentQueue == 3) 
 		{
                 	fprintf(fp, ", moving to queue 1\n");
-                	queueDelete(q3, array, msgstruct.sPid);
+                	lines++;
+			queueDelete(q3, array, msgstruct.sPid);
                 	addProcToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
@@ -286,11 +282,12 @@ int main(int argc, char** argv)
 	else if (msgstruct.timeFlg == 1) 
 	{
         	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds", msgstruct.sPid,msgstruct.burst);
-            
+         	lines++;   
          	if (pcbinfo[msgstruct.sPid].currentQueue == 1) 
 		{
                 	fprintf(fp, ", moving to queue 2\n");
-                	queueDelete(q1, array, msgstruct.sPid);
+                	lines++;
+			queueDelete(q1, array, msgstruct.sPid);
                 	addProcToQueue(q2, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 2;
             	}
@@ -298,7 +295,8 @@ int main(int argc, char** argv)
             	else if (pcbinfo[msgstruct.sPid].currentQueue == 2) 
 		{
                 	fprintf(fp, ", moving to queue 3\n");
-                	queueDelete(q2, array, msgstruct.sPid);
+                	lines++;
+			queueDelete(q2, array, msgstruct.sPid);
                 	addProcToQueue(q3, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 3;
             	}
@@ -368,13 +366,19 @@ int main(int argc, char** argv)
             	msgstruct.blockedFlg = 0;
             	msgstruct.sPid = nextP;
             	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", nextP, pcbinfo[nextP].currentQueue, *clockSec, *clockNS);
-            	if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
+            	lines++;
+		if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
 		{
                 	perror("OSS: error sending init msg");
                 	detach();
                 	exit(0);
             	}
         }
+	if (lines >= 10000)
+	{
+		detach();
+		exit(0);
+	}
     	}
 
 	detach();
@@ -428,7 +432,7 @@ void block(int blockpid)
     	else temp = temp * 100;
     	localNS = localNS + temp; 
     	fprintf(fp, "OSS: Time used to move user to blocked queue: %u nanoseconds\n", temp);
-	
+	lines++;	
 	if (localNS >= MAX) 
 	{
         	localSec++;
@@ -495,6 +499,7 @@ void term(int termPid)
     	pcbinfo[termPid].totalWholeSec = 0;
     	pcbinfo[termPid].totalWholeNS = 0;
 	fprintf(fp,"OSS: User %d has terminated\n",msgstruct.sPid);
+	lines++;
 }
 
 void incClock(int childPid) 
@@ -507,7 +512,8 @@ void incClock(int childPid)
     	else temp = temp * 10;
     	localns = localns + temp; 
 	fprintf(fp, "OSS: Time spent this dispatch: %ld nanoseconds\n", temp);
-    	localns = localns + pcbinfo[childPid].burstNS;
+    	lines++;
+	localns = localns + pcbinfo[childPid].burstNS;
     
     	if (localns >= MAX) 
 	{
@@ -582,7 +588,7 @@ void createChild()
     	}
    	numProc++;
 
-    	if (numProc >= 10) 
+    	if (numProc >= 100) 
 	{
         	newChild = 0;
     	}
@@ -608,6 +614,7 @@ void createChild()
         	pcbinfo[sPid].currentQueue = 1;
     	}
     	fprintf(fp, "OSS: Generating process PID %d and putting it in queue %d at time %u:%09u\n", pcbinfo[sPid].localPid, pcbinfo[sPid].currentQueue, *clockSec, *clockNS);
+	lines++;
 	fflush(fp);
     	if ( (childpid = fork()) < 0 )
 	{ 

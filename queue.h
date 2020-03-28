@@ -4,6 +4,10 @@
 #include <stdlib.h>
 
 int bitMap[19];
+int q0[19];
+int q1[19];
+int q2[19];
+int q3[19];
 
 void queue(int q[], int size) 
 {
