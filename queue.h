@@ -9,7 +9,7 @@ int q1[19];
 int q2[19];
 int q3[19];
 
-void queue(int q[], int size) 
+void createQueue(int q[], int size) 
 {
     	int i;
     	for(i=0; i<size; i++) 
@@ -39,7 +39,7 @@ int putQueue()
     	else return -1;
 }
 
-int addProcToQueue (int q[], int arrsize, int pNum) 
+int addToQueue (int q[], int arrsize, int pNum) 
 {
     	int i;
     	for (i=1; i<arrsize; i++) 
@@ -53,7 +53,7 @@ int addProcToQueue (int q[], int arrsize, int pNum)
     	return -1; 
 }
 
-int queueDelete(int q[], int arrsize, int pNum) 
+int deleteFromQueue(int q[], int arrsize, int pNum) 
 {
     	int i;
     	for (i=1; i<arrsize; i++) 
