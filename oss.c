@@ -138,14 +138,6 @@ int main(int argc, char** argv)
 	
 	while (1) 
 	{
-		/*if (realTimeGone < fullTime) 
-		{
-            		realTimeGone = (double)(time(NULL) - start);
-            		if (realTimeGone >= fullTime) 
-			{
-                		newChild = 0;
-            		}
-        	}*/
        
         if (newChild == 0 && numChild == 0) 
 	{
@@ -158,7 +150,7 @@ int main(int argc, char** argv)
         	numUnblocked = blockedCheckTwo();
         }
 
-        nextQ = putQueue();
+        nextQ = checkQueue();
     
         if ( (nextQ == -1) && (newChild == 0) ) 
 	{
@@ -323,7 +315,7 @@ int main(int argc, char** argv)
             	}
         }
 	
-	nextQ = putQueue();
+	nextQ = checkQueue();
         if (nextQ == 0) 
 	{
         	nextP = getChildQ(q0);

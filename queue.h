@@ -18,7 +18,7 @@ void createQueue(int q[], int size)
     	}
 }
 
-int putQueue() 
+int checkQueue() 
 {
     	if (q0[1] != 0) 
 	{
