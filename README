@@ -1,1 +1,32 @@
-Os Project 4
+====================================================Homework 4 README==================================================
+        Date:   March 29, 2020
+        Author: David Richards
+        Class:  CS4760
+=======================================================================================================================
+Invocation: ./oss [-h] [-i x]
+=======================================================================================================================
+How to Run:
+                1. Type make
+                2. Run the executable by typing ./oss [-h] [-i x]
+                3. ./oss alone will run with the following default ./oss -i log
+		4. Default files names (File holding run logs ("log"))
+                5. -h   = describe how the project should be run and then terminate
+		   -i   = specify the output file that information will be written to (default is "log")
+                6. Type make clean to remove (log, oss.o and user.o) + executables (oss and user)
+=======================================================================================================================
+Files included: 
+		1. oss.c = Main driver file used for most operations
+		2. user.c = Child processes file that oss communicates with via message queues and shared memory
+		3. queue.h = Contains functions necessary for the queue operations
+		4. shared.h = Contains the structs and information for shared memory
+=======================================================================================================================
+Version Control: (logging technique used)
+                1. My log files are included in /classes/OS/drichard/drichard.4/log.txt
+=======================================================================================================================
+Comments on submission: All project requirments met
+		1. Running statistics are printed to the screen
+		   - Average wait time, average blocked time, CPU idle time, and average CPU utilization
+		2. Program will always terminate normally but stop writing to the file if it gets above 10,000 lines
+=======================================================================================================================
+Aging Algorithm: 
+=======================================================================================================================

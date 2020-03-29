@@ -40,9 +40,12 @@ int getChildQ(int[]);
 int checkTime();
 void printStats();
 
-unsigned int totalSec, totalNS;
-unsigned int totalWaitSec, totalWaitNS;
-unsigned int bWholeSec, bWholeNS;
+unsigned int totalSec = 0;
+unsigned int totalNS = 0;
+unsigned int totalWaitSec = 0; 
+unsigned int totalWaitNS = 0;
+unsigned int bWholeSec;
+unsigned int bWholeNS;
 int smSec, smNS;
 unsigned int stopSec = 0;
 unsigned int stopNS = 0;
@@ -52,8 +55,8 @@ int array = 19;
 unsigned int maxNS, maxSec;
 unsigned int nextProcNS, nextProcSec, begin;
 unsigned int createNS, createSec;
-static unsigned int *clockSec; //pointer to shm sim clock (seconds)
-static unsigned int *clockNS; //pointer to shm sim clock (nanoseconds)
+static unsigned int *clockSec;
+static unsigned int *clockNS; 
 int blocked[19];
 int numProc = 0;
 int newChild = 1;
@@ -63,22 +66,26 @@ pid_t pids[20];
 int lines = 0;
 int nextP, nextQ;
 
-unsigned int cost0 = 2000000;
-unsigned int cost1 = 4000000; 
-unsigned int cost2 = 8000000;
-unsigned int cost3 = 16000000;
+/* Set values for quantum for all four queues */
+const static unsigned int cost0 = 10  * 1000000;
+const static unsigned int cost1 = 10 * 2 * 1000000;
+const static unsigned int cost2 = 10 * 3 * 1000000;
+const static unsigned int cost3 = 10 * 4 * 1000000;
 
+/* Default output file */
 char outputFileName[] = "log";
 FILE* fp;
 
+/* Contains message queue and pcb info from shared.h */
 struct messageQueue msgstruct;
-
 struct pcb * pcbinfo;
 
 
 int main(int argc, char** argv) 
 {
 	int c;
+	
+	/* Using getopt to parse command line options */
 	while((c=getopt(argc, argv, "i:h"))!= EOF)
         {
                 switch(c)
@@ -97,14 +104,14 @@ int main(int argc, char** argv)
 
         	}
 	}
-
+	
 	fp = fopen(outputFileName, "w");
 	time_t start = time(NULL);
 
 	int finishThem = 0;
     	int i;  
-    	maxNS = 999999998;
-    	maxSec = 0;
+    	maxNS = 1000000000;
+    	maxSec = 5;
     	begin = (unsigned int) getpid(); 
     	pid_t childpid; 
     	char id[20]; 
@@ -112,18 +119,21 @@ int main(int argc, char** argv)
    	int sPid;
     	int firstblocked;	
 
-	if (signal(SIGINT, sigErrors) == SIG_ERR) //sigerror on cntrl-c
+	/* Catch ctrl-c and 3 second alarm interupts */
+	if (signal(SIGINT, sigErrors) == SIG_ERR) //sigerror on ctrl-c
         {
                 exit(0);
         }
 
-        if (signal(SIGALRM, sigErrors) == SIG_ERR) //sigerror on program exceeding 2 second alarm
+        if (signal(SIGALRM, sigErrors) == SIG_ERR) //sigerror on program exceeding 3 second alarm
         {
                 exit(0);
         }
 
+	/* Set up shared memory */
 	setUp();
 	
+	/* Set up queues and bit vector */
 	bitMapF(array);
     	createQueue(q0, array);
     	createQueue(q1, array);
@@ -131,6 +141,7 @@ int main(int argc, char** argv)
     	createQueue(q3, array);
     	createQueue(blocked, array);
     
+	/* Schedule the first process */
    	nextPbegin();
 	
 	alarm(3);
@@ -138,19 +149,21 @@ int main(int argc, char** argv)
 	while (1) 
 	{
 
+	/* Exit loop once 100 are generated */
 	if (newChild == 0 && numChild == 0) 
 	{
         	break;
         }
 
+	/* Check the blocked queue for users needing to be generated */
         numUnblocked = 0;
         if (blockedCheck() == 0) 
 	{ 
         	numUnblocked = blockedCheckTwo();
         }
 
+	/* Get the highest priority member, advance clock and get ready to spawn new member */
         nextQ = checkQueue();
-    
         if ( (nextQ == -1) && (newChild == 0) ) 
 	{
         	nextPbegin();
@@ -163,7 +176,9 @@ int main(int argc, char** argv)
             		finishThem = 1;
                 	continue;
             	}
-        }	
+        }
+	
+	/* Adance clock and spawn/schedule new member if the queues are empty */	
 	else if ( nextQ == -1 && newChild == 1 ) 
 	{
         	incTime();
@@ -173,8 +188,11 @@ int main(int argc, char** argv)
 		{
                 	createChild();         
                 	numChild++;
+			if(lines<10000)
+			{
                 	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", msgstruct.sPid ,pcbinfo[msgstruct.sPid].currentQueue,*clockSec, *clockNS);
 			lines++;
+			}
 			if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
 			{
                     		perror("OSS: error sending init msg");
@@ -183,44 +201,9 @@ int main(int argc, char** argv)
                 	}
             	}
         }
-	else if ( finishThem == 1 && nextQ != -1) 
-	{
-        	finishThem = 0;
-                if (nextQ == 0) 
-		{
-                	nextP = getChildQ(q0);
-                	msgstruct.timeGivenNS = cost0;
-                	deleteFromQueue(q0, array, nextP);
-                	addToQueue(q0, array, nextP);
-                }
-                else if (nextQ == 1) 
-		{
-                	nextP = getChildQ(q1);
-                    	msgstruct.timeGivenNS = cost1;
-                    	deleteFromQueue(q1, array, nextP);
-                    	addToQueue(q1, array, nextP);
-                }
-                
-                if (nextP != -1) 
-		{
-                	msgstruct.msgTyp = (long) nextP;
-                	msgstruct.termFlg = 0;
-                    	msgstruct.timeFlg = 0;
-                    	msgstruct.blockedFlg = 0;
-                    	msgstruct.sPid = nextP;
-                    	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", nextP, pcbinfo[nextP].currentQueue, *clockSec, *clockNS);
-			lines++;
-			if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
-			{
-                        	perror("OSS: error sending user msg");
-                        	detach();
-                        	exit(0);
-                    	}
-                }
-        }
 
+	/* Wait for a message from a member */
 	firstblocked = blocked[1]; 
- 
         if ( msgrcv(qid, &msgstruct, sizeof(msgstruct), 99, 0) == -1 ) 
 	{
         	perror("oss: msgrcv error");
@@ -228,56 +211,89 @@ int main(int argc, char** argv)
             	exit(0);
         }
         blocked[1] = firstblocked; 
-        pcbinfo[msgstruct.sPid].burstNS = msgstruct.burst;
+        
+	/* Store the burst time in pcb and advance clock */
+	pcbinfo[msgstruct.sPid].burstNS = msgstruct.burst;
         incClock(msgstruct.sPid);
 
+	/* If member terminated, remove from the queue */
 	if (msgstruct.termFlg == 1) 
 	{
+		if(lines<10000)
+                {
 		fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds and then terminated\n", msgstruct.sPid,msgstruct.burst);
             	lines++;
+		}
 		term(msgstruct.sPid);
         }
        
+	/* Means that the member was blocked */
         else if (msgstruct.blockedFlg == 1) 
 	{	
+		if(lines<10000)
+                {
+
         	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds and then was blocked by an event. Moving to blocked queue\n", msgstruct.sPid, msgstruct.burst);
             	lines++;
+		}
 		block(msgstruct.sPid);
         }
  
+	/* The process did not finish its allocated time slice, move to appropriate queue */
         else if (msgstruct.timeFlg == 0) 
 	{
+		if(lines<10000)
+                {
         	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds, not using its entire quantum", msgstruct.sPid,msgstruct.burst);
-         
+         	lines++;
+		}
         	if (pcbinfo[msgstruct.sPid].currentQueue == 2) 
 		{
+			if(lines<10000)
+                	{
                 	fprintf(fp, ", moving to queue 1\n");
                 	lines++;
+			}
 			deleteFromQueue(q2, array, msgstruct.sPid);
                 	addToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
             	else if (pcbinfo[msgstruct.sPid].currentQueue == 3) 
 		{
+			if(lines<10000)
+                	{
                 	fprintf(fp, ", moving to queue 1\n");
                 	lines++;
+			}
 			deleteFromQueue(q3, array, msgstruct.sPid);
                 	addToQueue(q1, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 1;
             	}
             	else 
 		{
+			if(lines<10000)
+                {
                 	fprintf(fp, "\n");
+			lines++;
             	}
+		}
         }
+	
+	/* The process used full time slice, move to appropriate queue */
 	else if (msgstruct.timeFlg == 1) 
 	{
+		if(lines<10000)
+                {
         	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds", msgstruct.sPid,msgstruct.burst);
-         	lines++;   
+         	lines++;
+		}
          	if (pcbinfo[msgstruct.sPid].currentQueue == 1) 
 		{
+			if(lines<10000)
+                	{
                 	fprintf(fp, ", moving to queue 2\n");
                 	lines++;
+			}
 			deleteFromQueue(q1, array, msgstruct.sPid);
                 	addToQueue(q2, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 2;
@@ -285,19 +301,26 @@ int main(int argc, char** argv)
          
             	else if (pcbinfo[msgstruct.sPid].currentQueue == 2) 
 		{
+			if(lines<10000)
+                	{
                 	fprintf(fp, ", moving to queue 3\n");
                 	lines++;
+			}
 			deleteFromQueue(q2, array, msgstruct.sPid);
                 	addToQueue(q3, array, msgstruct.sPid);
                 	pcbinfo[msgstruct.sPid].currentQueue = 3;
             	}
             	else 
 		{
+			if(lines<10000)
+                {
                 	fprintf(fp, "\n");
+			lines++;
             	}
+		}
         }
 
-        
+        /* Spawn a new member */
         if (newChild == 1) 
 	{
         	if (checkTime()) 
@@ -314,6 +337,7 @@ int main(int argc, char** argv)
             	}
         }
 	
+	/* Get the next queue and schedule the appropraite process */
 	nextQ = checkQueue();
         if (nextQ == 0) 
 	{
@@ -349,6 +373,7 @@ int main(int argc, char** argv)
             	continue;
         }
 
+	/* Schedule appropriate member */
 	if (nextP != -1) 
 	{
             	msgstruct.msgTyp = (long) nextP;
@@ -356,8 +381,11 @@ int main(int argc, char** argv)
             	msgstruct.timeFlg = 0;
             	msgstruct.blockedFlg = 0;
             	msgstruct.sPid = nextP;
-            	fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", nextP, pcbinfo[nextP].currentQueue, *clockSec, *clockNS);
+            	if(lines<10000)
+                {
+		fprintf(fp, "OSS: Dispatching process PID %d from queue %d at time %u:%09u\n", nextP, pcbinfo[nextP].currentQueue, *clockSec, *clockNS);
             	lines++;
+		}
 		if ( msgsnd(qid, &msgstruct, sizeof(msgstruct), 0) == -1 ) 
 		{
                 	perror("OSS: error sending init msg");
@@ -365,11 +393,6 @@ int main(int argc, char** argv)
                 	exit(0);
             	}
         }
-	/*if (lines >= 10000)
-	{
-		detach();
-		exit(1);
-	}*/
     	}
 
 	printStats();
@@ -378,17 +401,21 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+/* Function to print final statistics */
 void printStats()
 {
-	double avgWait = (double)totalWaitSec + (double)totalWaitNS/MAX;
-        double avgBlocked = (double)bWholeSec + (double)bWholeNS/MAX;
-	double avgCPU = (double)bWholeSec + (double)bWholeNS/MAX;
-	printf("Average user wait time = %09u nanoseconds\n", avgWait / 100);
-	printf("Average blocked time = %09u nanoseconds\n", avgBlocked / 100);
-	printf("CPU idle time = %09u nanoseconds\n", stopNS);
-	//printf("Average CPU utilization = %09u nanoseconds\n", later);
+	double x = (double)totalWaitNS/1000000000;
+        double y = (double)totalWaitSec + x;
+	
+	double avgCPU = (double)bWholeSec + ((double)bWholeNS/1000000000);
+	printf("Average user wait time = %.9f nanoseconds\n", (y / 100)/100);
+	x = (double)bWholeNS/1000000000;
+        y = (double)bWholeSec + x;
+	printf("Average blocked time = %.9f nanoseconds\n", y / 100);
+	printf("CPU idle time = %u seconds\n", stopSec);
 }
 
+/* Function to increment idle time */
 int incTime()
 {
         unsigned int temp, localsec, localns, localsim_s, localsim_ns;
@@ -402,32 +429,33 @@ int incTime()
         else
         {
                 localsec = (createSec - localsim_s);
-                localns = createNS + (MAX - localsim_ns);
+                localns = createNS + (1000000000 - localsim_ns);
                 localsec--;
         }
-        if (localns >= MAX)
+        if (localns >= 1000000000)
         {
                 localsec++;
-                temp = localns - MAX;
+                temp = localns - 1000000000;
                 localns = temp;
         }
         stopSec = stopSec + localsec;
         stopNS = stopNS + localns;
-        if (stopNS >= MAX)
+        if (stopNS >= 1000000000)
         {
                 stopSec++;
-                temp = stopNS - MAX;
+                temp = stopNS - 1000000000;
                 stopNS = temp;
         }
         return 1;
 }
 
+/* function to see if its time to spawn new member */
 int checkTime() 
 {
     	int rvalue = 0;
-    	unsigned int localSec = *clockSec;
-    	unsigned int localNS = *clockNS;
-    	if ( (localSec > createSec) ||  ( (localSec >= createSec) && (localNS >= createNS) ) ) 
+    	unsigned int localsec = *clockSec;
+    	unsigned int localns = *clockNS;
+    	if ( (localsec > createSec) ||  ( (localsec >= createSec) && (localns >= createNS) ) ) 
 	{
         	rvalue = 1;
     	}
@@ -435,17 +463,18 @@ int checkTime()
     	return rvalue;
 }
 
+/* Function to maintain blocked time and chack blocked queues */
 void block(int blockpid) 
 {
     	int temp;
-    	unsigned int localSec, localNS;
+    	unsigned int localsec, localns;
     
     	bWholeSec += pcbinfo[blockpid].bWholeSec;
 	bWholeNS += pcbinfo[blockpid].bWholeNS;
-    	if (bWholeNS >= MAX) 
+    	if (bWholeNS >= 1000000000) 
 	{
         	bWholeSec++;
-        	temp = bWholeNS - MAX;
+        	temp = bWholeNS - 1000000000;
         	bWholeNS = temp;
     	}
    
@@ -461,25 +490,29 @@ void block(int blockpid)
 
     	addToQueue(blocked, array, blockpid);
 
-    	localSec = *clockSec;
-    	localNS = *clockNS;
+    	localsec = *clockSec;
+    	localns = *clockNS;
     	temp = random();
     	if (temp < 100) temp = 10000;
     	else temp = temp * 100;
-    	localNS = localNS + temp; 
-    	fprintf(fp, "OSS: Time used to move user to blocked queue: %u nanoseconds\n", temp);
-	lines++;	
-	if (localNS >= MAX) 
+    	localns = localns + temp; 
+    	if(lines<10000)
+        {
+	fprintf(fp, "OSS: Time used to move user to blocked queue: %u nanoseconds\n", temp);
+	lines++;
+	}	
+	if (localns >= 1000000000) 
 	{
-        	localSec++;
-        	temp = localNS - MAX;
-        	localNS = temp;
+        	localsec++;
+        	temp = localns - 1000000000;
+        	localns = temp;
     	}
    
-    	*clockSec = localSec;
-    	*clockNS = localNS;
+    	*clockSec = localsec;
+    	*clockNS = localns;
 }
 
+/* Get the member from the queue */
 int getChildQ(int q[]) 
 {
     	if (q[1] == 0) 
@@ -489,6 +522,7 @@ int getChildQ(int q[])
     	else return q[1];
 }
 
+/* Function that terminates appropriate member */
 void term(int termPid) 
 {
     	int status;
@@ -497,18 +531,18 @@ void term(int termPid)
     
     	totalSec += pcbinfo[termPid].totalWholeSec;
     	totalNS += pcbinfo[termPid].totalWholeNS;
-    	if (totalNS >= MAX) 
+    	if (totalNS >= 1000000000) 
 	{
         	totalSec++;
-        	temp = totalNS - MAX;
+        	temp = totalNS - 1000000000;
         	totalNS = temp;
     	}
  	totalWaitSec += (pcbinfo[termPid].totalWholeSec - pcbinfo[termPid].totalSec);
     	totalWaitNS +=(pcbinfo[termPid].totalWholeNS - pcbinfo[termPid].totalNS);
-    	if (totalWaitNS >= MAX) 
+    	if (totalWaitNS >= 1000000000) 
 	{
         	totalWaitSec++;
-        	temp = totalWaitNS - MAX;
+        	temp = totalWaitNS - 1000000000;
         	totalWaitNS = temp;
     	}
     
@@ -534,10 +568,14 @@ void term(int termPid)
     	pcbinfo[termPid].totalNS = 0;
     	pcbinfo[termPid].totalWholeSec = 0;
     	pcbinfo[termPid].totalWholeNS = 0;
+	if(lines<10000)
+        {
 	fprintf(fp,"OSS: User %d has terminated\n",msgstruct.sPid);
 	lines++;
+	}
 }
 
+/* Increment clock after message is recieved */
 void incClock(int childPid) 
 {
     	unsigned int localsec = *clockSec;
@@ -547,14 +585,17 @@ void incClock(int childPid)
     	if (temp < 100) temp = 100;
     	else temp = temp * 10;
     	localns = localns + temp; 
+	if(lines<10000)
+        {
 	fprintf(fp, "OSS: Time spent this dispatch: %ld nanoseconds\n", temp);
     	lines++;
+	}
 	localns = localns + pcbinfo[childPid].burstNS;
     
-    	if (localns >= MAX) 
+    	if (localns >= 1000000000) 
 	{
         	localsec++;
-        	temp = localns - MAX;
+        	temp = localns - 1000000000;
         	localns = temp;
     	}
     
@@ -562,6 +603,7 @@ void incClock(int childPid)
     	*clockNS = localns;
 }
 
+/* Get the used from a blocked state when necessary */
 void getChild(int wakepid) 
 {
     	unsigned int localsec, localns, temp;
@@ -592,23 +634,25 @@ void getChild(int wakepid)
     	localns = localns + temp; 
 }
 
+/* Sets the time for when the next member will spawn */
 void nextPbegin()
 {
 	unsigned int temp;
-	unsigned int localsecs = *clockSec;
+	unsigned int localsec = *clockSec;
 	unsigned int localns = *clockNS;
 	nextProcSec = rand_r(&begin) % (maxSec + 1);
     	nextProcNS = rand_r(&begin) % (maxNS + 1);
-    	createSec = localsecs + nextProcSec;
+    	createSec = localsec + nextProcSec;
     	createNS = localns + nextProcNS;
-	if (createNS >= MAX)
+	if (createNS >= 1000000000)
 	{
 		createSec++;
-		temp = createNS - MAX;
+		temp = createNS - 1000000000;
 		createNS = temp;
 	}
 }
 
+/* Spawn new member */
 void createChild() 
 {
     	char id[20]; 
@@ -649,8 +693,11 @@ void createChild()
         	addToQueue(q1, array, sPid);
         	pcbinfo[sPid].currentQueue = 1;
     	}
+	if(lines<10000)
+        {
     	fprintf(fp, "OSS: Generating process PID %d and putting it in queue %d at time %u:%09u\n", pcbinfo[sPid].localPid, pcbinfo[sPid].currentQueue, *clockSec, *clockNS);
 	lines++;
+	}
 	fflush(fp);
     	if ( (childpid = fork()) < 0 )
 	{ 
@@ -670,6 +717,7 @@ void createChild()
     	pids[sPid] = childpid;
 }
 
+/* Checks the blocked queue to see if it is time to spawn new member */
 int blockedCheckTwo() 
 {
     	int returnval = 0;
@@ -693,6 +741,7 @@ int blockedCheckTwo()
     	return returnval;
 }
 
+/* Check if the blocked queue is empty */
 int blockedCheck() 
 {
     	if (blocked[1] != 0) 
@@ -702,6 +751,7 @@ int blockedCheck()
     	return 1;
 }
 
+/* Create random integer */
 int randomTime() 
 {
     	int rvalue;
@@ -709,10 +759,11 @@ int randomTime()
     	return rvalue;
 }
 
+/* initialize the process control block */
 void PCB(int pidnum, int realTime) 
 {
-    	unsigned int localSec = *clockSec;
-    	unsigned int localNS = *clockNS;
+    	unsigned int localsec = *clockSec;
+    	unsigned int localns = *clockNS;
     	pcbinfo[pidnum].startSec = 0;
     	pcbinfo[pidnum].startNS = 0;
     	pcbinfo[pidnum].totalSec = 0;
@@ -740,6 +791,7 @@ void PCB(int pidnum, int realTime)
     	bitMap[pidnum] = 1;
 }
 
+/* Set up the shared memory */
 void setUp() 
 {   
     	shmid = shmget(SHMKEY_pct, 19*sizeof(struct pcb), 0777 | IPC_CREAT);
@@ -776,6 +828,7 @@ void setUp()
     	}
 }
 
+/* Detach shared memory */
 void detach() 
 {
     	shmctl(smSec, IPC_RMID, NULL);
@@ -784,6 +837,7 @@ void detach()
     	msgctl(qid, IPC_RMID, NULL);
 }
 
+/* Function to control two types of interupts */
 void sigErrors(int signum)
 {
         if (signum == SIGINT)

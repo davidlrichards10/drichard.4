@@ -28,7 +28,7 @@ static unsigned int *simClock_ns;
 unsigned int myStartTimeSecs;
 unsigned int myStartTimeNS; 
 int my_sim_pid; 
-int seed;
+unsigned int seed;
 unsigned int b_sec, b_ns;
 
 struct pcb * pcbinfo; 
@@ -54,21 +54,23 @@ int main(int argc, char** argv)
         	}
         	mstruct.userPid = getpid(); 
         	rand = randomTime();
-        	if (rand < 15) 
+        	/* User will get terminated in this range */
+		if (rand < 15) 
 		{
             		mstruct.burst = randomSTime();
             		incTime();
-	    		stats();
+			stats();
             		terminated();
             		return 1;
         	}
         
+		/* User will get blocked in this range */
         	else if (rand < 17) 
 		{
             		localsec = *simClock_secs; 
            	 	localns = *simClock_ns;
             		b_ns = rand_r(&seed) % 1000 + 1;
-            		b_sec = rand_r(&seed) % 5 + 1;
+            		b_sec = rand_r(&seed) % 3 + 1;
             		pcbinfo[my_sim_pid].bSec = localsec + b_sec;
             		pcbinfo[my_sim_pid].bNS = localns + b_ns;
             		incBlockedTime();
@@ -76,10 +78,12 @@ int main(int argc, char** argv)
             		blocked();
         	}
         
+		/* User will get preempted in this range */
         	else if (rand < 260) 
 		{
             		started();
         	}
+		/* Get the accurate time */
         	else 
 		{
             		showTime();
@@ -89,6 +93,33 @@ int main(int argc, char** argv)
 	return EXIT_SUCCESS;
 }
 
+void stats() 
+{    
+    	unsigned int myEndTimeSecs = *simClock_secs; 
+    	unsigned int myEndTimeNS = *simClock_ns;
+    	unsigned int temp;
+
+    	if (myEndTimeSecs == pcbinfo[my_sim_pid].startSec) 
+	{
+        	pcbinfo[my_sim_pid].totalWholeNS = (myEndTimeNS - pcbinfo[my_sim_pid].startNS);
+        	pcbinfo[my_sim_pid].totalWholeSec = 0;
+    	}
+    	else 
+	{
+        	pcbinfo[my_sim_pid].totalWholeSec = myEndTimeSecs - pcbinfo[my_sim_pid].startSec;
+        	pcbinfo[my_sim_pid].totalWholeNS = myEndTimeNS + ( 1000000000 - pcbinfo[my_sim_pid].startNS);
+        	pcbinfo[my_sim_pid].totalWholeSec--;
+    	}
+    	if (pcbinfo[my_sim_pid].totalWholeNS >=  1000000000) 
+	{
+        	pcbinfo[my_sim_pid].totalWholeSec++;
+        	temp = pcbinfo[my_sim_pid].totalWholeNS -  1000000000;
+        	pcbinfo[my_sim_pid].totalWholeNS = temp;
+    	}
+    
+}
+
+/* Get shared memory information */
 void getSM() 
 {   
     	pcbinfo = (struct pcb *)shmat(shmid_pct, 0, 0);
@@ -121,32 +152,7 @@ void getSM()
     	}
 }
 
-void stats() 
-{    
-    	unsigned int myEndTimeSecs = *simClock_secs; 
-    	unsigned int myEndTimeNS = *simClock_ns;
-    	unsigned int temp;
-
-    	if (myEndTimeSecs == pcbinfo[my_sim_pid].startSec) 
-	{
-        	pcbinfo[my_sim_pid].totalWholeNS = (myEndTimeNS - pcbinfo[my_sim_pid].startNS);
-        	pcbinfo[my_sim_pid].totalWholeSec = 0;
-    	}
-    	else 
-	{
-        	pcbinfo[my_sim_pid].totalWholeSec = myEndTimeSecs - pcbinfo[my_sim_pid].startSec;
-        	pcbinfo[my_sim_pid].totalWholeNS = myEndTimeNS + (MAX - pcbinfo[my_sim_pid].startNS);
-        	pcbinfo[my_sim_pid].totalWholeSec--;
-    	}
-    	if (pcbinfo[my_sim_pid].totalWholeNS >= MAX) 
-	{
-        	pcbinfo[my_sim_pid].totalWholeSec++;
-        	temp = pcbinfo[my_sim_pid].totalWholeNS - MAX;
-        	pcbinfo[my_sim_pid].totalWholeNS = temp;
-    	}
-    
-}
-
+/* Increment the time that a member is blocked */
 void incBlockedTime() 
 {
     	unsigned int now_secs = *simClock_secs;
@@ -155,26 +161,28 @@ void incBlockedTime()
     
     	pcbinfo[my_sim_pid].bWholeSec += b_sec; 
    	pcbinfo[my_sim_pid].bWholeNS += b_ns;
-    	if (pcbinfo[my_sim_pid].bWholeNS >= MAX) 
+    	if (pcbinfo[my_sim_pid].bWholeNS >= 1000000000) 
 	{
         	pcbinfo[my_sim_pid].bWholeSec++;
-        	temp = pcbinfo[my_sim_pid].bWholeNS - MAX;
+        	temp = pcbinfo[my_sim_pid].bWholeNS - 1000000000;
         	pcbinfo[my_sim_pid].bWholeNS = temp;
     	}       
 }
 
+/* Increments total CPU time */
 void incTime() 
 {
     	unsigned int temp = 0;
     	pcbinfo[my_sim_pid].totalNS += mstruct.burst;
-    	if (pcbinfo[my_sim_pid].totalNS >= MAX) 
+    	if (pcbinfo[my_sim_pid].totalNS >= 1000000000) 
 	{
         	pcbinfo[my_sim_pid].totalSec++;
-        	temp = pcbinfo[my_sim_pid].totalNS - MAX;
+        	temp = pcbinfo[my_sim_pid].totalNS - 1000000000;
         	pcbinfo[my_sim_pid].totalNS = temp;
     	}
 }
 
+/* Sends information through the message queue that is needed for OSS */
 void showTime() 
 {
     	incTime();
@@ -191,6 +199,7 @@ void showTime()
     	}
 }
 
+/* Report if a member was preempted */
 void started() 
 {
     	mstruct.blockedFlg = 0;
@@ -207,6 +216,7 @@ void started()
     	}
 }
 
+/* Report if the member was terminated */
 void terminated() 
 {
     	mstruct.blockedFlg = 0;
@@ -222,6 +232,7 @@ void terminated()
     	}
 }
 
+/* Gets the random time slice in nanoseconds */
 unsigned int randomSTime() 
 {
     	unsigned int return_val;
@@ -229,6 +240,7 @@ unsigned int randomSTime()
     	return return_val;
 }
 
+/* Report if the member was blocked */
 void blocked() 
 {
     	mstruct.msgTyp = 99;
@@ -243,6 +255,7 @@ void blocked()
     	}
 }
 
+/* Create random integer */
 int randomTime() 
 {
     	int return_val;

@@ -9,6 +9,7 @@ int q1[19];
 int q2[19];
 int q3[19];
 
+/* Initialize the queue */
 void createQueue(int q[], int size) 
 {
     	int i;
@@ -18,6 +19,7 @@ void createQueue(int q[], int size)
     	}
 }
 
+/* Chekc the status of queue members */
 int checkQueue() 
 {
     	if (q0[1] != 0) 
@@ -39,6 +41,7 @@ int checkQueue()
     	else return -1;
 }
 
+/* Add member to appropriate queue */
 int addToQueue (int q[], int arrsize, int pNum) 
 {
     	int i;
@@ -53,6 +56,7 @@ int addToQueue (int q[], int arrsize, int pNum)
     	return -1; 
 }
 
+/* Delete a member from appropriate queue */
 int deleteFromQueue(int q[], int arrsize, int pNum) 
 {
     	int i;
@@ -72,6 +76,7 @@ int deleteFromQueue(int q[], int arrsize, int pNum)
     	return -1;
 }
 
+/* Initialize the bit vector */
 void bitMapF(int n) 
 {
     	int i;
@@ -81,6 +86,7 @@ void bitMapF(int n)
     	}
 }
 
+/* Check the bit vector in specified spot */
 int getBitSpot() 
 {
     	int i;

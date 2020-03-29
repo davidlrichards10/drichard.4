@@ -8,13 +8,14 @@
 #ifndef SHARED_H
 #define SHARED_H
 
+/* For shared memory */
 #define SHMKEY_sim_s 4020012
 #define SHMKEY_sim_ns 4020013
 #define SHMKEY_pct 4020014
 #define MSGQKEY_oss 4020069
 #define BUFF_SZ sizeof (unsigned int)
-#define MAX 1000000000
 
+/* Process control block information */
 struct pcb{
     unsigned int startSec;
     unsigned int startNS;
@@ -34,7 +35,7 @@ struct pcb{
     int currentQueue;
 };
 
-
+/* Contains communication variables for oss->user */
 struct messageQueue {
     long msgTyp;
     int sPid;
