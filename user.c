@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "shared.h"
+#include "queue.h"
 
 void getSM();
 int randomTime(); 

@@ -38,6 +38,7 @@ void term(int);
 void block(int);
 int getChildQ(int[]);
 int checkTime();
+void printStats();
 
 unsigned int totalSec, totalNS;
 unsigned int totalWaitSec, totalWaitNS;
@@ -101,9 +102,7 @@ int main(int argc, char** argv)
 	time_t start = time(NULL);
 
 	int finishThem = 0;
-    	int i; 
-   	double realTimeGone = 0;
-    	double fullTime = 10; 
+    	int i;  
     	maxNS = 999999998;
     	maxSec = 0;
     	begin = (unsigned int) getpid(); 
@@ -138,8 +137,8 @@ int main(int argc, char** argv)
 	
 	while (1) 
 	{
-       
-        if (newChild == 0 && numChild == 0) 
+
+	if (newChild == 0 && numChild == 0) 
 	{
         	break;
         }
@@ -366,16 +365,61 @@ int main(int argc, char** argv)
                 	exit(0);
             	}
         }
-	if (lines >= 10000)
+	/*if (lines >= 10000)
 	{
 		detach();
-		exit(0);
-	}
+		exit(1);
+	}*/
     	}
 
+	printStats();
 	detach();
 
 	return 0;
+}
+
+void printStats()
+{
+	double avgWait = (double)totalWaitSec + (double)totalWaitNS/MAX;
+        double avgBlocked = (double)bWholeSec + (double)bWholeNS/MAX;
+	double avgCPU = (double)bWholeSec + (double)bWholeNS/MAX;
+	printf("Average user wait time = %09u nanoseconds\n", avgWait / 100);
+	printf("Average blocked time = %09u nanoseconds\n", avgBlocked / 100);
+	printf("CPU idle time = %09u nanoseconds\n", stopNS);
+	//printf("Average CPU utilization = %09u nanoseconds\n", later);
+}
+
+int incTime()
+{
+        unsigned int temp, localsec, localns, localsim_s, localsim_ns;
+        localsec = 0;
+        localsim_s = *clockSec;
+        localsim_ns = *clockNS;
+        if (localsim_s == createSec)
+        {
+                localns = (createNS - localsim_ns);
+        }
+        else
+        {
+                localsec = (createSec - localsim_s);
+                localns = createNS + (MAX - localsim_ns);
+                localsec--;
+        }
+        if (localns >= MAX)
+        {
+                localsec++;
+                temp = localns - MAX;
+                localns = temp;
+        }
+        stopSec = stopSec + localsec;
+        stopNS = stopNS + localns;
+        if (stopNS >= MAX)
+        {
+                stopSec++;
+                temp = stopNS - MAX;
+                stopNS = temp;
+        }
+        return 1;
 }
 
 int checkTime() 
@@ -658,39 +702,6 @@ int blockedCheck()
     	return 1;
 }
 
-int incTime()
-{
-    	unsigned int temp, localsec, localns, localsim_s, localsim_ns;
-    	localsec = 0;
-   	localsim_s = *clockSec;
-    	localsim_ns = *clockNS;
-    	if (localsim_s == createSec) 
-	{
-        	localns = (createNS - localsim_ns);
-    	}
-    	else 
-	{
-        	localsec = (createSec - localsim_s);
-        	localns = createNS + (MAX - localsim_ns);
-        	localsec--;
-    	}
-    	if (localns >= MAX) 
-	{
-        	localsec++;
-        	temp = localns - MAX;
-        	localns = temp;
-    	}
-    	stopSec = stopSec + localsec; 
-    	stopNS = stopNS + localns;
-    	if (stopNS >= MAX) 
-	{
-        	stopSec++;
-        	temp = stopNS - MAX;
-        	stopNS = temp;
-    	}
-    	return 1;
-}
-
 int randomTime() 
 {
     	int rvalue;
@@ -777,11 +788,13 @@ void sigErrors(int signum)
 {
         if (signum == SIGINT)
         {
-                printf("\nSIGINT\n");
+		printStats();
+		printf("\nInterupted by ctrl-c\n");
         }
         else
         {
-                printf("\nSIGALRM\n");
+		printStats();
+                printf("\nInterupted by 3 second alarm\n");
         }
 	
 	detach();
