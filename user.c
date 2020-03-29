@@ -129,7 +129,7 @@ void getSM()
         	exit(1);
     	}
     
-    	shmid_sim_secs = shmget(SHMKEY_sim_s, BUFF_SZ, 0444);
+    	shmid_sim_secs = shmget(4020012, sizeof (unsigned int), 0444);
         if (shmid_sim_secs == -1) 
 	{ 
             	perror("user: shmget error");
@@ -137,7 +137,7 @@ void getSM()
         }
     	simClock_secs = (unsigned int*) shmat(shmid_sim_secs, 0, 0);
     
-    	shmid_sim_ns = shmget(SHMKEY_sim_ns, BUFF_SZ, 0444);
+    	shmid_sim_ns = shmget(4020013, sizeof (unsigned int), 0444);
         if (shmid_sim_ns == -1) 
 	{ 
             	perror("user: shmget error");
@@ -145,7 +145,7 @@ void getSM()
         }
     	simClock_ns = (unsigned int*) shmat(shmid_sim_ns, 0, 0);
     
-    	if ( (oss_qid = msgget(MSGQKEY_oss, 0777)) == -1 ) 
+    	if ( (oss_qid = msgget(4020069, 0777)) == -1 ) 
 	{
         	perror("user: msgget error");
         	exit(0);

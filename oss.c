@@ -40,10 +40,10 @@ int getChildQ(int[]);
 int checkTime();
 void printStats();
 
-unsigned int totalSec = 0;
-unsigned int totalNS = 0;
-unsigned int totalWaitSec = 0; 
-unsigned int totalWaitNS = 0;
+unsigned int totalSec;
+unsigned int totalNS;
+unsigned int totalWaitSec; 
+unsigned int totalWaitNS;
 unsigned int bWholeSec;
 unsigned int bWholeNS;
 int smSec, smNS;
@@ -404,15 +404,13 @@ int main(int argc, char** argv)
 /* Function to print final statistics */
 void printStats()
 {
-	double x = (double)totalWaitNS/1000000000;
-        double y = (double)totalWaitSec + x;
-	
-	double avgCPU = (double)bWholeSec + ((double)bWholeNS/1000000000);
-	printf("Average user wait time = %.9f nanoseconds\n", (y / 100)/100);
-	x = (double)bWholeNS/1000000000;
-        y = (double)bWholeSec + x;
-	printf("Average blocked time = %.9f nanoseconds\n", y / 100);
+	double avgWait = ((((double)totalWaitNS/1000000000) + (double)totalWaitSec / 100));
+	double avgCPU = ((((double)totalNS/1000000000) + (double)totalSec / 100));
+	double avgBlocked = ((((double)bWholeNS/1000000000) + (double)bWholeSec / 100));
+	printf("Average user wait time = %.9f seconds\n", avgWait);
+	printf("Average blocked time = %.9f seconds\n", avgBlocked);
 	printf("CPU idle time = %u seconds\n", stopSec);
+	printf("Average CPU utilization = %.9f seconds\n", avgCPU);
 }
 
 /* Function to increment idle time */
@@ -469,8 +467,8 @@ void block(int blockpid)
     	int temp;
     	unsigned int localsec, localns;
     
-    	bWholeSec += pcbinfo[blockpid].bWholeSec;
-	bWholeNS += pcbinfo[blockpid].bWholeNS;
+    	bWholeSec += pcbinfo[blockpid].bWholeSec * 100;
+	bWholeNS += pcbinfo[blockpid].bWholeNS * 100;
     	if (bWholeNS >= 1000000000) 
 	{
         	bWholeSec++;
@@ -529,16 +527,16 @@ void term(int termPid)
     	unsigned int temp;
     	waitpid(msgstruct.userPid, &status, 0);
     
-    	totalSec += pcbinfo[termPid].totalWholeSec;
-    	totalNS += pcbinfo[termPid].totalWholeNS;
+    	totalSec += pcbinfo[termPid].totalWholeSec / 100;
+    	totalNS += pcbinfo[termPid].totalWholeNS / 100;
     	if (totalNS >= 1000000000) 
 	{
         	totalSec++;
         	temp = totalNS - 1000000000;
         	totalNS = temp;
     	}
- 	totalWaitSec += (pcbinfo[termPid].totalWholeSec - pcbinfo[termPid].totalSec);
-    	totalWaitNS +=(pcbinfo[termPid].totalWholeNS - pcbinfo[termPid].totalNS);
+ 	totalWaitSec += (pcbinfo[termPid].totalWholeSec - pcbinfo[termPid].totalSec) / 100;
+    	totalWaitNS +=(pcbinfo[termPid].totalWholeNS - pcbinfo[termPid].totalNS) / 100;
     	if (totalWaitNS >= 1000000000) 
 	{
         	totalWaitSec++;
@@ -794,7 +792,7 @@ void PCB(int pidnum, int realTime)
 /* Set up the shared memory */
 void setUp() 
 {   
-    	shmid = shmget(SHMKEY_pct, 19*sizeof(struct pcb), 0777 | IPC_CREAT);
+    	shmid = shmget(4020014, 18*sizeof(struct pcb), 0777 | IPC_CREAT);
      	if (shmid == -1) 
 	{ 
             	perror("oss: shmget error");
@@ -807,21 +805,21 @@ void setUp()
         	exit(1);
     	}   
 
-    	smSec = shmget(SHMKEY_sim_s, BUFF_SZ, 0777 | IPC_CREAT);
+    	smSec = shmget(4020012, sizeof (unsigned int), 0777 | IPC_CREAT);
         if (smSec == -1) 
 	{ 
             	perror("oss: shmget error");
             	exit(1);
         }
     	clockSec = (unsigned int*) shmat(smSec, 0, 0);
-    	smNS = shmget(SHMKEY_sim_ns, BUFF_SZ, 0777 | IPC_CREAT);
+    	smNS = shmget(4020013, sizeof (unsigned int), 0777 | IPC_CREAT);
         if (smNS == -1) 
 	{ 
             	perror("oss: shmget error");
             	exit(1);
         }
     	clockNS = (unsigned int*) shmat(smNS, 0, 0);
-    	if ( (qid = msgget(MSGQKEY_oss, 0777 | IPC_CREAT)) == -1 ) 
+    	if ( (qid = msgget(4020069, 0777 | IPC_CREAT)) == -1 ) 
 	{
         	perror("oss: msgget error");
         	exit(0);
