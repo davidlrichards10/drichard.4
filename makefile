@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS =
+CFLAGS = 
 TARGET = oss
 TARGET1 = user
 OBJ = oss.o

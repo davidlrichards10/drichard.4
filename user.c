@@ -10,12 +10,10 @@
 #include "queue.h"
 
 void getSM();
-int randomTime(); 
 void showTime();
 void terminated();
 void blocked();
 void started();
-unsigned int randomSTime();
 void incTime ();
 void incBlockedTime ();
 void stats();
@@ -30,6 +28,7 @@ unsigned int myStartTimeNS;
 int my_sim_pid; 
 unsigned int seed;
 unsigned int b_sec, b_ns;
+int termProb = 15;
 
 struct pcb * pcbinfo; 
 
@@ -53,11 +52,12 @@ int main(int argc, char** argv)
             	exit(0);
         	}
         	mstruct.userPid = getpid(); 
-        	rand = randomTime();
+        	int rand = rand_r(&seed) % 1000 + 1;;
         	/* User will get terminated in this range */
-		if (rand < 15) 
+		if (rand < termProb) 
 		{
-            		mstruct.burst = randomSTime();
+			unsigned int randomSlice = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
+            		mstruct.burst = randomSlice;
             		incTime();
 			stats();
             		terminated();
@@ -205,7 +205,8 @@ void started()
     	mstruct.blockedFlg = 0;
     	mstruct.termFlg = 0;
     	mstruct.timeFlg = 0;
-    	mstruct.burst = randomSTime();
+	unsigned int randomSlice = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
+    	mstruct.burst = randomSlice;
     	incTime();
     	mstruct.sPid = my_sim_pid;
     	mstruct.msgTyp = 99;
@@ -232,14 +233,6 @@ void terminated()
     	}
 }
 
-/* Gets the random time slice in nanoseconds */
-unsigned int randomSTime() 
-{
-    	unsigned int return_val;
-    	return_val = (rand_r(&seed) % (mstruct.timeGivenNS) + 1);
-    	return return_val;
-}
-
 /* Report if the member was blocked */
 void blocked() 
 {
@@ -253,12 +246,4 @@ void blocked()
         	perror("user: error sending msg");
         	exit(0);
     	}
-}
-
-/* Create random integer */
-int randomTime() 
-{
-    	int return_val;
-    	return_val = rand_r(&seed) % 1000 + 1;
-    	return return_val;
 }

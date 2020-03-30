@@ -106,17 +106,10 @@ int main(int argc, char** argv)
 	}
 	
 	fp = fopen(outputFileName, "w");
-	time_t start = time(NULL);
-
-	int finishThem = 0;
-    	int i;  
     	maxNS = 1000000000;
     	maxSec = 5;
-    	begin = (unsigned int) getpid(); 
-    	pid_t childpid; 
-    	char id[20]; 
-    	char childSPid[4]; 
-   	int sPid;
+    	int end = 0;
+	begin = (unsigned int) getpid();   
     	int firstblocked;	
 
 	/* Catch ctrl-c and 3 second alarm interupts */
@@ -173,7 +166,7 @@ int main(int argc, char** argv)
          
         	if (numUnblocked == 0) 
 		{
-            		finishThem = 1;
+            		end = 1;
                 	continue;
             	}
         }
@@ -760,8 +753,6 @@ int randomTime()
 /* initialize the process control block */
 void PCB(int pidnum, int realTime) 
 {
-    	unsigned int localsec = *clockSec;
-    	unsigned int localns = *clockNS;
     	pcbinfo[pidnum].startSec = 0;
     	pcbinfo[pidnum].startNS = 0;
     	pcbinfo[pidnum].totalSec = 0;
