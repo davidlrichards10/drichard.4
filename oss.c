@@ -79,7 +79,7 @@ FILE* fp;
 /* Contains message queue and pcb info from shared.h */
 struct messageQueue msgstruct;
 struct pcb * pcbinfo;
-
+struct times waitTime;
 
 int main(int argc, char** argv) 
 {

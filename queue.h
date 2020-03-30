@@ -2,6 +2,7 @@
 #define QUEUE_H
  
 #include <stdlib.h>
+#include "shared.h"
 
 int bitMap[19];
 int q0[19];

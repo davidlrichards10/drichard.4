@@ -8,6 +8,11 @@
 #ifndef SHARED_H
 #define SHARED_H
 
+struct times{
+	int nanoseconds;
+	int seconds;
+};
+
 /* Process control block information */
 struct pcb{
     unsigned int startSec;
