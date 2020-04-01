@@ -1,9 +1,3 @@
-/*
- * Name: David Richards
- * Assignment: CS4760 Project 4
- * Date: Tue March 24th
- * File: oss.c (main file)
- */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +15,8 @@
 #include "shared.h"
 #include "queue.h"
 
-void setUp(); //allocate shared memory
-void detach(); //clear shared memory and message queues
+void setUp(); 
+void detach(); 
 void sigErrors(int signum);
 void bitMapF(int n);
 void nextPbegin();
@@ -79,7 +73,7 @@ FILE* fp;
 /* Contains message queue and pcb info from shared.h */
 struct messageQueue msgstruct;
 struct pcb * pcbinfo;
-struct times waitTime;
+
 
 int main(int argc, char** argv) 
 {
@@ -843,3 +837,4 @@ void sigErrors(int signum)
 	detach();
         exit(0);
 }
+

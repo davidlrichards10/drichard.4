@@ -9,24 +9,34 @@ How to Run:
                 1. Type make
                 2. Run the executable by typing ./oss [-h] [-i x]
                 3. ./oss alone will run with the following default ./oss -i log
-		4. Default files names (File holding run logs ("log"))
+                4. Default files names (File holding run logs ("log"))
                 5. -h   = describe how the project should be run and then terminate
-		   -i   = specify the output file that information will be written to (default is "log")
+                   -i   = specify the output file that information will be written to (default is "log")
                 6. Type make clean to remove (log, oss.o and user.o) + executables (oss and user)
 =======================================================================================================================
-Files included: 
-		1. oss.c = Main driver file used for most operations
-		2. user.c = Child processes file that oss communicates with via message queues and shared memory
-		3. queue.h = Contains functions necessary for the queue operations
-		4. shared.h = Contains the structs and information for shared memory
+Files included:
+                1. oss.c = Main driver file used for most operations
+                2. user.c = Child processes file that oss communicates with via message queues and shared memory
+                3. queue.h = Contains functions necessary for the queue operations
+                4. shared.h = Contains the structs and information for shared memory
 =======================================================================================================================
 Version Control: (logging technique used)
                 1. My log files are included in /classes/OS/drichard/drichard.4/log.txt
 =======================================================================================================================
-Comments on submission: All project requirments met
-		1. Running statistics are printed to the screen
-		   - Average wait time, average blocked time, CPU idle time, and average CPU utilization
-		2. Program will always terminate normally but stop writing to the file if it gets above 10,000 lines
+Comments on submission: All project requirments met I believe
+                1. Running statistics are printed to the screen
+                   - Average wait time, average blocked time, CPU idle time, and average CPU utilization
+                2. Program will always terminate normally but stop writing to the file if it gets above 10,000 lines
+                3. In the user processes file, I saw the comments given on March 31st as to give the process 4 options,
+                   Terminate, get blocked, use all of time quantum, or get preempted. I did this using a random number
+                   generator is user.c
+                4. Queue 0 has the highest priority and contains real-time processes and queue1-queue2-queue3 go down
+                   from there. And there is also one blocked queue
+                5. If the process does not terminate, it will get blocked for r.s seconds which are random numbers
+                   0-3 and 0-1000 then will become preemented after using p% of its time quantum where p is a random
+                   number 0-100. If these three things do not happen, the process will use all of its assigned quantum
 =======================================================================================================================
-Aging Algorithm: 
+Aging Algorithm:
+                1. When a process becomes blocked, it waits r.s seconds before being preempted where r and s are
+                   are random numbers 0-3 and 0-1000.
 =======================================================================================================================
