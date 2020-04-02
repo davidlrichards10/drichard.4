@@ -1,3 +1,8 @@
+/* Name: David Richards
+ * Date: March 29th
+ * Assignment: hw 4
+ * File: oss.c
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +38,7 @@ void block(int);
 int getChildQ(int[]);
 int checkTime();
 void printStats();
+void agingAlgo();
 
 unsigned int totalSec;
 unsigned int totalNS;
@@ -231,8 +237,9 @@ int main(int argc, char** argv)
 	{
 		if(lines<10000)
                 {
-        	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds, not using its entire quantum", msgstruct.sPid,msgstruct.burst);
-         	lines++;
+        	fprintf(fp, "OSS: Receiving that process PID %d ran for %u nanoseconds\n", msgstruct.sPid, msgstruct.burst);
+         	fprintf(fp, "OSS: not using its entire quantum");
+		lines++;
 		}
         	if (pcbinfo[msgstruct.sPid].currentQueue == 2) 
 		{
@@ -396,8 +403,45 @@ void printStats()
 	double avgBlocked = ((((double)bWholeNS/1000000000) + (double)bWholeSec / 100));
 	printf("Average user wait time = %.9f seconds\n", avgWait);
 	printf("Average blocked time = %.9f seconds\n", avgBlocked);
-	printf("CPU idle time = %u seconds\n", stopSec);
+	printf("CPU idle time = %u sec:%u nanosec\n", stopSec, stopNS);
 	printf("Average CPU utilization = %.9f seconds\n", avgCPU);
+}
+
+/* aging algorithm to prevent starvation */
+void agingAlgo()
+{
+	int age = pcbinfo[msgstruct.sPid].totalWholeNS - pcbinfo[msgstruct.sPid].totalNS; //wait time
+        int cpu = pcbinfo[msgstruct.sPid].totalNS; //time spent on the cpu
+	int i;
+	int currentID = msgstruct.sPid;
+	if ( cpu - age > 1900000000)
+	{
+		for(i=0; i<19; i++)
+    		{	
+
+        		if(q1[i] == currentID)
+        		{
+            			q1[i] = q1[i+1];
+            			break;
+        		}
+			else if(q2[i] == currentID)
+                        {
+                                q2[i] = q2[i+1];
+                                break;
+                        }
+			else if(q3[i] == currentID)
+                        {
+                                q3[i] = q3[i+1];
+                                break;
+                        }
+			else
+			{
+				break;
+			}
+
+    		}
+		
+	} 
 }
 
 /* Function to increment idle time */

@@ -37,6 +37,10 @@ Comments on submission: All project requirments met I believe
                    number 0-100. If these three things do not happen, the process will use all of its assigned quantum
 =======================================================================================================================
 Aging Algorithm:
-                1. When a process becomes blocked, it waits r.s seconds before being preempted where r and s are
-                   are random numbers 0-3 and 0-1000.
+		1. This part was very confusing to me. I implemented this aging as a function is oss.c. What I did is
+		   find the difference between the time spent on the cpu and wait time. After reviewing the average
+		   numbers, I decided that if this number was above 1900000000 nanoseconds then I would manually
+		   advance it in the queue that it is in, in turn raising the priority on that process so that it can
+		   be handled before starving. Although if it is in queue 0 I do nothing because those processes will
+		   be handled first anyways. 
 =======================================================================================================================

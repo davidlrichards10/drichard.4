@@ -1,3 +1,9 @@
+/* Name: David Richards
+ * Date: March 29th
+ * Assignment: hw 4
+ * File: queue.h
+ */
+
 #ifndef QUEUE_H
 #define QUEUE_H
  
